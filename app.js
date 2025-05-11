@@ -12,7 +12,7 @@ const AppError = require('./utils/appError');
 
 
 const indexRouter = require('./routes/index');
-
+const usersRouter = require('./routes/usersRoute');
 const app = express();
 
 app.use(express.urlencoded({ extended: false }));
@@ -37,6 +37,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use(mongooseSanitize());
 
 app.use('/', indexRouter);
+app.use('/api/v1/users', usersRouter);
 
 app.all('*', function(req, res, next) {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
