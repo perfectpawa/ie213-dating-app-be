@@ -28,3 +28,5 @@ benchmarks/graphs
 
 #webstorm
 .idea
+
+config.env
