@@ -1,4 +1,6 @@
 const User = require('../models/userModel');
+const getDataUri = require("../utils/dataUri");
+const {uploadToCloudinary} = require("../utils/cloudinary");
 
 // Create a new user
 exports.createUser = async (req, res) => {
@@ -47,7 +49,7 @@ exports.getUserByAuthId = async (req, res) => {
         if (!user) {
             return res.status(404).json({
                 status: 'error',
-                message: 'User not found'
+                message: 'User not found - auth_id does not exist: ' + auth_id
             });
         }
 
@@ -86,4 +88,54 @@ exports.deleteUserByAuthId = async (req, res) => {
             message: error.message
         });
     }
-}; 
+};
+
+//Complete user profile
+exports.completeUserProfile = async (req, res) => {
+    try {
+        const { auth_id, user_name, full_name, gender, bio } = req.body;
+        const profilePic = req.file;
+
+        let cloudinaryResponse;
+
+        if (profilePic) {
+            const dataUri = getDataUri(profilePic);
+            cloudinaryResponse = await uploadToCloudinary(dataUri);
+            console.log(cloudinaryResponse);
+        }
+
+        //find user by auth_id
+        const user = await User.findOne({ auth_id });
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        //update user profile
+        user.user_name = user_name || user.user_name;
+        user.full_name = full_name || user.full_name;
+        user.gender = gender || user.gender;
+        user.bio = bio || user.bio;
+        user.profile_picture = cloudinaryResponse ? cloudinaryResponse : user.profile_picture;
+        user.completeProfile = true;
+
+        await user.save({validateBeforeSave: false});
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Profile updated successfully',
+            data: {
+                user
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
