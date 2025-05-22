@@ -93,7 +93,9 @@ exports.deleteUserByAuthId = async (req, res) => {
 //Complete user profile
 exports.completeUserProfile = async (req, res) => {
     try {
-        const { auth_id, user_name, full_name, gender, bio } = req.body;
+        const { id } = req.params;
+
+        const { user_name, full_name, gender, bio } = req.body;
         const profilePic = req.file;
 
         let cloudinaryResponse;
@@ -105,7 +107,7 @@ exports.completeUserProfile = async (req, res) => {
         }
 
         //find user by auth_id
-        const user = await User.findOne({ auth_id });
+        const user = await User.findOne({ id });
 
         if (!user) {
             return res.status(404).json({
@@ -121,6 +123,50 @@ exports.completeUserProfile = async (req, res) => {
         user.bio = bio || user.bio;
         user.profile_picture = cloudinaryResponse ? cloudinaryResponse : user.profile_picture;
         user.completeProfile = true;
+
+        await user.save({validateBeforeSave: false});
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Profile updated successfully',
+            data: {
+                user
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
+// update user cover picture
+exports.updateUserCoverPicture = async (req, res) => {
+    try {
+        const coverPic = req.file;
+
+        let cloudinaryResponse;
+
+        if (coverPic) {
+            const dataUri = getDataUri(coverPic);
+            cloudinaryResponse = await uploadToCloudinary(dataUri);
+            console.log(cloudinaryResponse);
+        }
+
+        //find user by auth_id
+        const user = await User.findOne({ id });
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        //update cover user profile
+        user.cover_picture = cloudinaryResponse ? cloudinaryResponse : user.cover_picture;
 
         await user.save({validateBeforeSave: false});
 
