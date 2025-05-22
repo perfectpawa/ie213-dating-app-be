@@ -1,11 +1,14 @@
 const mongoose = require('mongoose');
 
-const messageSchema = new mongoose.Schema({    messageId: {
+const messageSchema = new mongoose.Schema({
+    messageId: {
         type: String,
         unique: true,
         default: function() {
             return 'MSG' + Math.floor(100000 + Math.random() * 900000);
-        }    },    senderId: {
+        }
+    },
+    senderId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Users',
         required: [true, 'Message must have a sender']
@@ -46,8 +49,7 @@ messageSchema.methods.markAsRead = async function() {
 };
 
 // Static method to get conversation between two users
-messageSchema.statics.getConversation = async function(user1Id, user2Id, limit = 50) {
-    return await this.find({
+messageSchema.statics.getConversation = async function(user1Id, user2Id, limit = 50) {    return await this.find({
         $or: [
             { senderId: user1Id, receiverId: user2Id },
             { senderId: user2Id, receiverId: user1Id }
@@ -56,4 +58,5 @@ messageSchema.statics.getConversation = async function(user1Id, user2Id, limit =
 };
 
 const Message = mongoose.model('Messages', messageSchema);
+module.exports = Message;
 module.exports = Message;

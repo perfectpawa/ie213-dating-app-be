@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Message = require('../models/messageModel');
 const User = require('../models/userModel');
 const Match = require('../models/matchModel');
@@ -91,12 +92,8 @@ exports.getConversation = catchAsync(async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     // Find the other user - can be either ObjectId or auth_id
-    let otherUser;
-    if (mongoose.Types.ObjectId.isValid(otherUserId)) {
-        otherUser = await User.findById(otherUserId);
-    } else {
-        otherUser = await User.findOne({ auth_id: otherUserId });
-    }
+    // Use idHelpers to find user by any ID type
+    const otherUser = await require('../utils/idHelpers').findUserByAnyId(otherUserId);
 
     if (!otherUser) {
         return next(new AppError('User not found', 404));

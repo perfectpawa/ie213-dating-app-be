@@ -1,11 +1,14 @@
 const mongoose = require('mongoose');
 
-const blockSchema = new mongoose.Schema({    blockId: {
+const blockSchema = new mongoose.Schema({
+    blockId: {
         type: String,
         unique: true,
         default: function() {
             return 'BLK' + Math.floor(100000 + Math.random() * 900000);
-        }    },    blockerId: {
+        }
+    },
+    blockerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Users',
         required: [true, 'Block must have a blocker']

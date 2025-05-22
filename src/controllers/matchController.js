@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Match = require('../models/matchModel');
 const User = require('../models/userModel');
+const Message = require('../models/messageModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
@@ -15,29 +16,62 @@ const getUserIdFromAuthId = async (authId) => {
 
 // Get all matches
 exports.getMatches = catchAsync(async (req, res, next) => {
-  // Optional pagination
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 100;
-  const skip = (page - 1) * limit;
-  
-  // Optional userId filter
-  const filter = req.query.userId ? 
-    { $or: [{ user1Id: req.query.userId }, { user2Id: req.query.userId }] } : 
-    {};
-  
-  const matches = await Match.find(filter)
-    .select('_id matchId user1Id user2Id swipeId matchDate isMutual createdAt updatedAt')
-    .sort('-createdAt')
-    .skip(skip)
-    .limit(limit);
-  
-  res.status(200).json({
-    status: 'success',
-    results: matches.length,
-    data: {
-      matches
+  try {
+    // Optional pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const skip = (page - 1) * limit;
+    
+    // Initialize filter
+    let filter = {};
+    
+    // If userId is provided, find by either ObjectId or auth_id
+    if (req.query.userId) {
+      // Check if it's a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(req.query.userId)) {
+        filter = { 
+          $or: [
+            { user1Id: req.query.userId }, 
+            { user2Id: req.query.userId }
+          ] 
+        };
+      } else {
+        // It's likely an auth_id, so we need to find the user first
+        const user = await User.findOne({ auth_id: req.query.userId });
+        
+        if (!user) {
+          return res.status(404).json({
+            status: 'fail',
+            message: `User with auth_id ${req.query.userId} not found`,
+          });
+        }
+        
+        // Use the user's ObjectId for filtering
+        filter = { 
+          $or: [
+            { user1Id: user._id }, 
+            { user2Id: user._id }
+          ] 
+        };
+      }
     }
-  });
+    
+    const matches = await Match.find(filter)
+      .select('_id matchId user1Id user2Id swipeId matchDate isMutual createdAt updatedAt')
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(limit);
+    
+    res.status(200).json({
+      status: 'success',
+      results: matches.length,
+      data: {
+        matches
+      }
+    });
+  } catch (error) {
+    return next(new AppError(error.message, 500));
+  }
 });
 
 // Get single match by ID

@@ -1,89 +1,83 @@
 const User = require('../models/userModel');
+const mongoose = require('mongoose');
+const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/appError');
+const idHelpers = require('../utils/idHelpers');
 
 // Create a new user
-exports.createUser = async (req, res) => {
-    try {
-        const { auth_id, email } = req.body;
+exports.createUser = catchAsync(async (req, res, next) => {
+    const { auth_id, email } = req.body;
 
-        if (!auth_id || !email) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Auth ID and email are required'
-            });
-        }
-
-        const existingUser = await User.findOne({ auth_id });
-        if (existingUser) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'User with this auth_id already exists'
-            });
-        }
-
-        const user = await User.create({
-            auth_id,
-            email,
-            completeProfile: false
-        });
-
-        res.status(201).json({
-            status: 'success',
-            data: { user }
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
+    if (!auth_id || !email) {
+        return next(new AppError('Auth ID and email are required', 400));
     }
-};
 
-// Get user by auth_id
-exports.getUserByAuthId = async (req, res) => {
-    try {
-        const { auth_id } = req.params;
-
-        const user = await User.findOne({ auth_id });
-        if (!user) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'User not found'
-            });
-        }
-
-        res.status(200).json({
-            status: 'success',
-            data: { user }
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
+    const existingUser = await User.findOne({ auth_id });
+    if (existingUser) {
+        return next(new AppError('User with this auth_id already exists', 400));
     }
-};
 
-// Delete user by auth_id
-exports.deleteUserByAuthId = async (req, res) => {
-    try {
-        const { auth_id } = req.params;
+    const user = await User.create({
+        auth_id,
+        email,
+        completeProfile: false
+    });
 
-        const user = await User.findOneAndDelete({ auth_id });
-        if (!user) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'User not found'
-            });
-        }
+    res.status(201).json({
+        status: 'success',
+        data: { user }
+    });
+});
 
-        res.status(204).json({
-            status: 'success',
-            data: null
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
+// Get user by auth_id or ObjectId
+exports.getUserByAuthId = catchAsync(async (req, res, next) => {
+    const { auth_id } = req.params;
+    const user = await idHelpers.findUserByAnyId(auth_id);
+
+    if (!user) {
+        return next(new AppError('User not found', 404));
     }
-}; 
+
+    res.status(200).json({
+        status: 'success',
+        data: { user }
+    });
+});
+
+// Delete user by auth_id or ObjectId
+exports.deleteUserByAuthId = catchAsync(async (req, res, next) => {
+    const { auth_id } = req.params;
+    let user;
+
+    // Try to delete by ObjectId first if valid
+    if (mongoose.Types.ObjectId.isValid(auth_id)) {
+        user = await User.findByIdAndDelete(auth_id);
+    }
+    
+    // If not found, try by auth_id
+    if (!user) {
+        user = await User.findOneAndDelete({ auth_id });
+    }
+
+    if (!user) {
+        return next(new AppError('User not found', 404));
+    }
+
+    res.status(204).json({
+        status: 'success',
+        data: null
+    });
+});
+
+// Get all users
+exports.getAllUsers = catchAsync(async (req, res, next) => {
+    const users = await User.find();
+    
+    res.status(200).json({
+        status: 'success',
+        results: users.length,
+        data: {
+            users
+        }
+    });
+});

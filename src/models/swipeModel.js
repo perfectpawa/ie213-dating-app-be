@@ -1,11 +1,14 @@
 const mongoose = require('mongoose');
 
-const swipeSchema = new mongoose.Schema({    swipeId: {
+const swipeSchema = new mongoose.Schema({
+    swipeId: {
         type: String,
         unique: true,
         default: function() {
             return 'SWP' + Math.floor(100000 + Math.random() * 900000);
-        }    },    swiperId: {
+        }
+    },
+    swiperId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Users',
         required: [true, 'Swipe must have a swiper']

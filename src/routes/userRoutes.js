@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { createUser, getUserByAuthId, deleteUserByAuthId } = require('../controllers/userController');
+const userController = require('../controllers/userController');
+const idConverterMiddleware = require('../middleware/idConverter');
 
-router.post('/create', createUser);
-router.get('/:auth_id', getUserByAuthId);
-router.delete('/:auth_id', deleteUserByAuthId);
+// Apply ID converter middleware to all routes
+router.use(idConverterMiddleware.convertAuthIdToObjectId);
 
-module.exports = router; 
+router.get('/', userController.getAllUsers);
+router.post('/create', userController.createUser);
+router.get('/:auth_id', userController.getUserByAuthId);
+router.delete('/:auth_id', userController.deleteUserByAuthId);
+
+module.exports = router;
