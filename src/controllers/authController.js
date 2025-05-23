@@ -42,9 +42,7 @@ const createSendToken = (user, statusCode, res, message) => {
         status: 'success',
         message,
         token,
-        data: {
-            user
-        }
+        user
     });
 }
 
@@ -77,7 +75,8 @@ exports.signup = catchAsync(async (req, res, next) => {
 
                 return res.status(200).json({
                     status: 'success',
-                    message: 'OTP re-sent to your email address'
+                    message: 'OTP re-sent to your email address',
+                    user: existingUser
                 });
 
             } catch (error) {
@@ -87,7 +86,6 @@ exports.signup = catchAsync(async (req, res, next) => {
         }
     }
 
-    // Nếu là người dùng mới
     const newUser = await User.create({
         email,
         password,
@@ -112,6 +110,7 @@ exports.signup = catchAsync(async (req, res, next) => {
             200,
             res,
             'User registered successfully. Please check your email for verification'
+
         );
 
     } catch (error) {
