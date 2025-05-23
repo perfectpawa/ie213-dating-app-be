@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const userRoutes = require('./routes/userRoutes');
 
 const app = express();
+app.use(cookieParser());
 
 // Middleware
 app.use(cors({

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .otp {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>{{message}}</h2>
+    <p>Chào {{username}},</p>
+    <p>Mã OTP của bạn để đăng nhập là:</p>
+    <p class="otp">{{otp}}</p>
+    <p>Nếu bạn không yêu cầu đăng nhập, hãy bỏ qua email này.</p>
+    <div class="footer">&copy; 2025 Công ty. Mọi quyền được bảo lưu.</div>
+</div>
+</body>
+</html>
