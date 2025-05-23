@@ -106,9 +106,7 @@ exports.completeUserProfile = async (req, res) => {
             console.log(cloudinaryResponse);
         }
 
-        //find user by auth_id
-        const user = await User.findOne({ id });
-
+        const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({
                 status: 'error',
@@ -129,9 +127,7 @@ exports.completeUserProfile = async (req, res) => {
         res.status(200).json({
             status: 'success',
             message: 'Profile updated successfully',
-            data: {
-                user
-            }
+            user
         });
 
     } catch (error) {
@@ -178,6 +174,18 @@ exports.updateUserCoverPicture = async (req, res) => {
             }
         });
 
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
+exports.getCurrentUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        res.status(200).json({ user });
     } catch (error) {
         res.status(500).json({
             status: 'error',
