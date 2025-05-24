@@ -5,11 +5,17 @@ const Message = require('../models/messageModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
-// Helper function to get ObjectId from auth_id
-const getUserIdFromAuthId = async (authId) => {
-  const user = await User.findOne({ auth_id: authId });
+// Helper function to get ObjectId from user id
+const getUserObjectId = async (userId) => {
+  // If it's already a valid ObjectId, return it
+  if (mongoose.Types.ObjectId.isValid(userId)) {
+    return userId;
+  }
+  
+  // Otherwise, try to find the user by _id
+  const user = await User.findById(userId);
   if (!user) {
-    throw new Error(`User with auth_id ${authId} not found`);
+    throw new Error(`User with ID ${userId} not found`);
   }
   return user._id;
 };
@@ -25,35 +31,42 @@ exports.getMatches = catchAsync(async (req, res, next) => {
     // Initialize filter
     let filter = {};
     
-    // If userId is provided, find by either ObjectId or auth_id
+    // If userId is provided, find by MongoDB ObjectId
     if (req.query.userId) {
+      let userObjectId;
+      
       // Check if it's a valid ObjectId
       if (mongoose.Types.ObjectId.isValid(req.query.userId)) {
-        filter = { 
-          $or: [
-            { user1Id: req.query.userId }, 
-            { user2Id: req.query.userId }
-          ] 
-        };
+        userObjectId = req.query.userId;
       } else {
-        // It's likely an auth_id, so we need to find the user first
-        const user = await User.findOne({ auth_id: req.query.userId });
-        
-        if (!user) {
-          return res.status(404).json({
+        // If it's not a valid ObjectId, try to find the user by MongoDB _id
+        // This assumes the userId is the string representation of MongoDB _id
+        try {
+          // First check if it's an existing user (using _id)
+          const user = await User.findById(req.query.userId);
+          if (user) {
+            userObjectId = user._id;
+          } else {
+            return res.status(404).json({
+              status: 'fail',
+              message: `User with ID ${req.query.userId} not found`,
+            });
+          }
+        } catch (err) {
+          return res.status(400).json({
             status: 'fail',
-            message: `User with auth_id ${req.query.userId} not found`,
+            message: `Invalid user ID format: ${req.query.userId}`,
           });
         }
-        
-        // Use the user's ObjectId for filtering
-        filter = { 
-          $or: [
-            { user1Id: user._id }, 
-            { user2Id: user._id }
-          ] 
-        };
       }
+      
+      // Use the userObjectId for filtering
+      filter = { 
+        $or: [
+          { user1Id: userObjectId }, 
+          { user2Id: userObjectId }
+        ] 
+      };
     }
     
     const matches = await Match.find(filter)
@@ -106,15 +119,12 @@ exports.createMatch = catchAsync(async (req, res, next) => {
   try {
     const { user1Id, user2Id, matchDate, isMutual = true } = req.body;
     
-    // Convert auth_ids to ObjectIds if they are strings
+    // Convert user IDs to ObjectIds if needed
     let user1ObjectId, user2ObjectId;
     
     try {
-      user1ObjectId = mongoose.Types.ObjectId.isValid(user1Id) ? 
-        user1Id : await getUserIdFromAuthId(user1Id);
-      
-      user2ObjectId = mongoose.Types.ObjectId.isValid(user2Id) ? 
-        user2Id : await getUserIdFromAuthId(user2Id);
+      user1ObjectId = await getUserObjectId(user1Id);
+      user2ObjectId = await getUserObjectId(user2Id);
     } catch (error) {
       return next(new AppError(`Error converting user IDs: ${error.message}`, 400));
     }
@@ -145,8 +155,11 @@ exports.createMatch = catchAsync(async (req, res, next) => {
 // Update match details
 exports.updateMatch = catchAsync(async (req, res, next) => {
   const { matchId } = req.params;
-  const userId = req.user._id;
-  const { isMutual } = req.body;
+  const { isMutual, userId } = req.body;
+  
+  if (!userId) {
+    return next(new AppError('User ID is required in the request body', 400));
+  }
   
   // Only allow updating isMutual status
   if (typeof isMutual !== 'boolean') {
@@ -185,7 +198,11 @@ exports.updateMatch = catchAsync(async (req, res, next) => {
 // Unmatch (delete match)
 exports.unmatch = catchAsync(async (req, res, next) => {
   const { matchId } = req.params;
-  const userId = req.user._id;
+  const { userId } = req.query;
+  
+  if (!userId) {
+    return next(new AppError('User ID is required as a query parameter', 400));
+  }
   
   const match = await Match.findOne({
     $or: [
@@ -222,7 +239,12 @@ exports.unmatch = catchAsync(async (req, res, next) => {
 
 // Get all matches for current user
 exports.getUserMatches = catchAsync(async (req, res, next) => {
-  const userId = req.user._id;
+  // Get userId from query parameter
+  const { userId } = req.query;
+  
+  if (!userId) {
+    return next(new AppError('User ID is required as a query parameter', 400));
+  }
   
   // Find all matches for the current user
   const matches = await Match.find({
@@ -264,7 +286,12 @@ exports.getUserMatches = catchAsync(async (req, res, next) => {
 
 // Get all matches with latest messages for the current user
 exports.getUserMatchesWithMessages = catchAsync(async (req, res, next) => {
-  const userId = req.user._id;
+  // Get userId from query parameter
+  const { userId } = req.query;
+  
+  if (!userId) {
+    return next(new AppError('User ID is required as a query parameter', 400));
+  }
   
   // Use the aggregation pipeline from the model
   const matchesWithMessages = await Match.getMatchesWithLatestMessages(userId);

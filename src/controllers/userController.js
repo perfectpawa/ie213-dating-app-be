@@ -2,7 +2,6 @@ const User = require('../models/userModel');
 const mongoose = require('mongoose');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
-const idHelpers = require('../utils/idHelpers');
 
 // Create a new user
 exports.createUser = catchAsync(async (req, res, next) => {
@@ -32,7 +31,18 @@ exports.createUser = catchAsync(async (req, res, next) => {
 // Get user by auth_id or ObjectId
 exports.getUserByAuthId = catchAsync(async (req, res, next) => {
     const { auth_id } = req.params;
-    const user = await idHelpers.findUserByAnyId(auth_id);
+    
+    let user;
+    
+    // Try to find by ObjectId if valid
+    if (mongoose.Types.ObjectId.isValid(auth_id)) {
+        user = await User.findById(auth_id);
+    }
+    
+    // If not found, try by auth_id
+    if (!user) {
+        user = await User.findOne({ auth_id });
+    }
 
     if (!user) {
         return next(new AppError('User not found', 404));

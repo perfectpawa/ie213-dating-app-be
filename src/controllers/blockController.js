@@ -42,8 +42,15 @@ exports.getAllBlocks = catchAsync(async (req, res, next) => {
 
 // Block a user
 exports.blockUser = catchAsync(async (req, res, next) => {
-    const blockerId = req.user._id;
+    // Get blockerId from query parameter instead of req.user
+    const { userId } = req.query;
     const blockedUserId = req.params.userId;
+    
+    if (!userId) {
+        return next(new AppError('Your user ID is required as a query parameter', 400));
+    }
+    
+    const blockerId = userId;
 
     // Find the user to block - can be either ObjectId or auth_id
     let blockedUser;
@@ -116,8 +123,15 @@ exports.blockUser = catchAsync(async (req, res, next) => {
 
 // Unblock a user
 exports.unblockUser = catchAsync(async (req, res, next) => {
-    const blockerId = req.user._id;
+    // Get blockerId from query parameter instead of req.user
+    const { userId } = req.query;
     const blockedUserId = req.params.userId;
+    
+    if (!userId) {
+        return next(new AppError('Your user ID is required as a query parameter', 400));
+    }
+    
+    const blockerId = userId;
 
     // Find the blocked user - can be either ObjectId or auth_id
     let blockedUser;
@@ -155,7 +169,11 @@ exports.unblockUser = catchAsync(async (req, res, next) => {
 
 // Get all blocked users
 exports.getBlockedUsers = catchAsync(async (req, res, next) => {
-    const userId = req.user._id;
+    const { userId } = req.query;
+    
+    if (!userId) {
+        return next(new AppError('User ID is required as a query parameter', 400));
+    }
 
     // Get all users blocked by current user
     const blocks = await Block.find({ blockerId: userId })
@@ -209,7 +227,11 @@ exports.getBlockById = catchAsync(async (req, res, next) => {
 // Check if a user is blocked
 exports.checkBlock = catchAsync(async (req, res, next) => {
     const { userId } = req.params;
-    const currentUserId = req.user._id;
+    const { currentUserId } = req.query;
+    
+    if (!currentUserId) {
+        return next(new AppError('Current user ID is required as a query parameter', 400));
+    }
     
     const isBlocked = await Block.isBlocked(currentUserId, userId);
     
@@ -223,12 +245,14 @@ exports.checkBlock = catchAsync(async (req, res, next) => {
 
 // Get users who blocked the current user
 exports.getBlockersUsers = catchAsync(async (req, res, next) => {
-    const userId = req.user._id;
+    const { userId } = req.query;
     
-    // Only admins should be able to see who blocked a user
-    if (!req.user.isAdmin) {
-        return next(new AppError('You do not have permission to perform this action', 403));
+    if (!userId) {
+        return next(new AppError('User ID is required as a query parameter', 400));
     }
+    
+    // Since we're removing middleware, we'll simplify the admin check for now
+    // Anyone can see who blocked them
 
     // Get all users who blocked the current user
     const blocks = await Block.find({ blockedUserId: userId })

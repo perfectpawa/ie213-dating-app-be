@@ -46,9 +46,16 @@ exports.getAllSwipes = catchAsync(async (req, res, next) => {
 
 // Create a swipe
 exports.createSwipe = catchAsync(async (req, res, next) => {
-    const swiperId = req.user._id;
-    // Handle both status and direction parameters for compatibility
-    let { swipedUserId, status, direction } = req.body;
+    // Get swiperId from request body or query instead of req.user
+    let { swiperId, swipedUserId, status, direction } = req.body;
+    
+    if (!swiperId) {
+        swiperId = req.query.userId;
+    }
+    
+    if (!swiperId) {
+        return next(new AppError('Swiper ID is required in the request body or as a query parameter', 400));
+    }
 
     // If direction is provided instead of status, convert it (for backward compatibility)
     if (!status && direction) {
@@ -187,7 +194,11 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
 
 // Get user swipes
 exports.getUserSwipes = catchAsync(async (req, res, next) => {
-    const userId = req.user._id;
+    const { userId } = req.query;
+    
+    if (!userId) {
+        return next(new AppError('User ID is required as a query parameter', 400));
+    }
     
     // Get all swipes created by the user
     const swipes = await Swipe.find({ swiperId: userId })
@@ -208,7 +219,11 @@ exports.getUserSwipes = catchAsync(async (req, res, next) => {
 
 // Get potential matches
 exports.getPotentialMatches = catchAsync(async (req, res, next) => {
-    const userId = req.user._id;
+    const { userId } = req.query;
+    
+    if (!userId) {
+        return next(new AppError('User ID is required as a query parameter', 400));
+    }
     
     // Find users that the current user has not swiped on yet
     const swipedUserIds = await Swipe.find({ swiperId: userId }).distinct('swipedUserId');

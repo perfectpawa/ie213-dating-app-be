@@ -41,10 +41,18 @@ exports.getAllMessages = catchAsync(async (req, res, next) => {
 
 // Send a message
 exports.sendMessage = catchAsync(async (req, res, next) => {
-    const senderId = req.user._id;
-    const { receiverId, content } = req.body;
+    const { senderId, receiverId, content } = req.body;
+    
+    if (!senderId || !receiverId || !content) {
+        return next(new AppError('Please provide senderId, receiverId and content', 400));
+    }
 
-    // Check if receiver exists
+    // Check if users exist
+    const sender = await User.findById(senderId);
+    if (!sender) {
+        return next(new AppError('Sender not found', 404));
+    }
+    
     const receiver = await User.findById(receiverId);
     if (!receiver) {
         return next(new AppError('Receiver not found', 404));
@@ -85,11 +93,16 @@ exports.sendMessage = catchAsync(async (req, res, next) => {
 
 // Get conversation history
 exports.getConversation = catchAsync(async (req, res, next) => {
-    const userId = req.user._id;
+    // Get userId from query parameter instead of req.user (from middleware)
+    const { userId } = req.query;
     const { otherUserId } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
+    
+    if (!userId) {
+        return next(new AppError('User ID is required as a query parameter', 400));
+    }
 
     // Find the other user - can be either ObjectId or auth_id
     // Use idHelpers to find user by any ID type
@@ -142,7 +155,12 @@ exports.getConversation = catchAsync(async (req, res, next) => {
 
 // Get all conversations (message threads)
 exports.getConversations = catchAsync(async (req, res, next) => {
-    const userId = req.user._id;
+    // Get userId from query parameter instead of req.user (from middleware)
+    const { userId } = req.query;
+    
+    if (!userId) {
+        return next(new AppError('User ID is required as a query parameter', 400));
+    }
     
     const matches = await Match.find({
         $or: [
@@ -262,8 +280,11 @@ exports.getMessageById = catchAsync(async (req, res, next) => {
 // Update/Edit message
 exports.updateMessage = catchAsync(async (req, res, next) => {
     const { messageId } = req.params;
-    const { content } = req.body;
-    const userId = req.user._id;
+    const { content, userId } = req.body;
+    
+    if (!userId) {
+        return next(new AppError('User ID is required in the request body', 400));
+    }
     
     // Find the message
     const message = await Message.findById(messageId);
@@ -292,7 +313,11 @@ exports.updateMessage = catchAsync(async (req, res, next) => {
 // Delete message
 exports.deleteMessage = catchAsync(async (req, res, next) => {
     const { messageId } = req.params;
-    const userId = req.user._id;
+    const { userId } = req.query;
+    
+    if (!userId) {
+        return next(new AppError('User ID is required as a query parameter', 400));
+    }
     
     // Find the message
     const message = await Message.findById(messageId);
