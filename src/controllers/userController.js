@@ -103,7 +103,6 @@ exports.completeUserProfile = async (req, res) => {
         if (profilePic) {
             const dataUri = getDataUri(profilePic);
             cloudinaryResponse = await uploadToCloudinary(dataUri);
-            console.log(cloudinaryResponse);
         }
 
         const user = await User.findById(id);
