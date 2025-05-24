@@ -276,7 +276,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 });
 
 exports.resetPassword = catchAsync(async (req, res, next) => {
-    const { email, otp, password, passwordConfirm } = req.body;
+    const { email, otp, password } = req.body;
 
     const user = await User.findOne({
         email,
@@ -289,7 +289,6 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
     }
 
     user.password = password;
-    user.passwordConfirm = passwordConfirm;
     user.resetPasswordOtp = undefined;
     user.resetPasswordOtpExpires = undefined;
 
@@ -299,7 +298,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 });
 
 exports.changePassword = catchAsync(async (req, res, next) => {
-    const { currentPassword, newPassword, newPasswordConfirm } = req.body;
+    const { currentPassword, newPassword } = req.body;
 
     const {email} = req.user;
 
@@ -313,12 +312,7 @@ exports.changePassword = catchAsync(async (req, res, next) => {
         return next(new AppError('Invalid current password', 401));
     }
 
-    if (newPassword !== newPasswordConfirm) {
-        return next(new AppError('New password and confirm password do not match', 400));
-    }
-
     user.password = newPassword;
-    user.passwordConfirm = newPasswordConfirm;
 
     await user.save();
 
