@@ -210,6 +210,10 @@ exports.login = catchAsync(async (req, res, next) => {
         return next(new AppError('Invalid email or password', 401));
     }
 
+    if (!user.isVerified) {
+        return next(new AppError('Invalid email or password.', 403));
+    }
+
     createSendToken(user, 200, res, 'Login successfully');
 });
 

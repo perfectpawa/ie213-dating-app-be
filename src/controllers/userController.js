@@ -93,6 +93,9 @@ exports.deleteUserByAuthId = async (req, res) => {
 //Complete user profile
 exports.completeUserProfile = async (req, res) => {
     try {
+
+        console.log(req.body);
+
         const { id } = req.params;
 
         const { user_name, full_name, gender, bio } = req.body;
