@@ -182,10 +182,30 @@ exports.deletePost = async (req, res) => {
     }
 };
 
+// Get all posts by a specific user
 exports.getAllPostsByUser = async (req, res) => {
     try {
         const posts = await Post.find({ user: req.params.userId })
             .populate('user', 'user_name')
+            .sort('-createdAt');
+
+        res.status(200).json({
+            status: 'success',
+            data: { posts }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
+// Get all posts except your own
+exports.getAllPostsExceptOwn = async (req, res) => {
+    try {
+        const posts = await Post.find({ user: { $ne: req.user._id } })
+            .populate('user', 'user_name profile_picture full_name bio')
             .sort('-createdAt');
 
         res.status(200).json({
