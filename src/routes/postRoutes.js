@@ -5,7 +5,7 @@ const upload = require('../middleware/multer');
 const { createPost, getAllPosts, toggleLike, addComment, deletePost, getAllPostsByUser, getAllPostsExceptOwn } = require('../controllers/postController');
 
 // Create a new post
-router.post('/', isAuthenticated, upload.single("postPic"), createPost);
+router.post('/', isAuthenticated, upload.single("image"), createPost);
 
 // Get all posts
 router.get('/', isAuthenticated, getAllPosts);
