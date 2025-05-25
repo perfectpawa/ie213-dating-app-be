@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const app = require('./app');
 
 const PORT = process.env.PORT || 8000;
-const DB_URI = process.env.DB_URI;
+const DB_URI = process.env.DB_URI || 'mongodb://localhost:27017/dating-app';
 
 // Connect to MongoDB
 console.log('Attempting to connect to MongoDB...');
@@ -40,4 +40,4 @@ process.on('SIGINT', async () => {
         console.error('Error during MongoDB connection closure:', err);
         process.exit(1);
     }
-}); 
+});
