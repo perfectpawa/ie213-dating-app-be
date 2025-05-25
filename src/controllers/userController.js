@@ -40,6 +40,31 @@ exports.createUser = async (req, res) => {
     }
 };
 
+// Get user by ID
+exports.getUserById = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { user }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
 // Get user by auth_id
 exports.getUserByAuthId = async (req, res) => {
     try {
@@ -93,7 +118,6 @@ exports.deleteUserByAuthId = async (req, res) => {
 //Complete user profile
 exports.completeUserProfile = async (req, res) => {
     try {
-
         console.log(req.body);
 
         const { id } = req.params;

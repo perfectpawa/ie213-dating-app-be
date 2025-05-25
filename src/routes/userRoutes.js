@@ -3,12 +3,13 @@ const router = express.Router();
 const upload = require('../middleware/multer');
 const isAuthenticated = require('../middleware/isAuthenticated');
 
-const { createUser, completeUserProfile, getCurrentUser } = require('../controllers/userController');
+const { createUser, completeUserProfile, getCurrentUser, getUserById } = require('../controllers/userController');
 const {signup, verifyAccount, resendOTP, login, logout, forgotPassword, resetPassword, changePassword } = require('../controllers/authController');
 
 router.post('/create', createUser);
-router.post('/:id/complete-profile', upload.single("profilePic"), completeUserProfile);
+router.post('/:id/complete-profile', upload.single("profile_picture"), completeUserProfile);
 router.get('/me', isAuthenticated, getCurrentUser);
+router.get('/:userId', isAuthenticated, getUserById);
 
 //Auth routes
 router.post('/signup', signup);
