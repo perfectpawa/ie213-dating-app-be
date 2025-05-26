@@ -1,5 +1,6 @@
 const { Post, Comment } = require('../models/postModel');
 const User = require('../models/userModel');
+const Notification = require('../models/notificationModel');
 const getDataUri = require("../utils/dataUri");
 const { uploadToCloudinary } = require("../utils/cloudinary");
 
@@ -85,6 +86,16 @@ exports.toggleLike = async (req, res) => {
         if (likeIndex === -1) {
             // Like the post
             post.likes.push(req.user._id);
+            
+            // Create notification for post owner if the liker is not the post owner
+            if (post.user.toString() !== req.user._id.toString()) {
+                await Notification.createNotification(
+                    post.user,
+                    req.user._id,
+                    'like',
+                    post._id
+                );
+            }
         } else {
             // Unlike the post
             post.likes.splice(likeIndex, 1);
