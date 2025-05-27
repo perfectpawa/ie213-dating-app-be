@@ -4,6 +4,7 @@ const User = require('../models/userModel');
 const Match = require('../models/matchModel');
 const Block = require('../models/blockModel');
 const Message = require('../models/messageModel');
+const { createNotification } = require('./notificationController');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
@@ -145,6 +146,10 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                     user2Id: swipedUserId,
                     swipeId: existingSwipe._id
                 });
+
+                // Create notifications for both users
+                await createNotification(swiperId, swipedUserId, 'match', match._id);
+                await createNotification(swipedUserId, swiperId, 'match', match._id);
             }
         }
         
@@ -180,6 +185,10 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                 user2Id: swipedUserObjectId,
                 swipeId: newSwipe._id
             });
+
+            // Create notifications for both users
+            await createNotification(swiperId, swipedUserId, 'match', match._id);
+            await createNotification(swipedUserId, swiperId, 'match', match._id);
         }
     }
 

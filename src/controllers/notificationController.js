@@ -1,6 +1,7 @@
 const Notification = require('../models/notificationModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+const { getIO } = require('../services/socketService');
 
 // Get all notifications for a user
 exports.getNotifications = catchAsync(async (req, res, next) => {
@@ -56,4 +57,29 @@ exports.markAllAsRead = catchAsync(async (req, res, next) => {
         status: 'success',
         message: 'All notifications marked as read'
     });
+});
+
+// Create a new notification and emit it in real-time
+exports.createNotification = catchAsync(async (recipientId, senderId, type, postId = null) => {
+    console.log('Creating notification:', { recipientId, senderId, type, postId });
+    
+    const notification = await Notification.createNotification(recipientId, senderId, type, postId);
+    
+    // Populate the notification with sender and post details
+    const populatedNotification = await Notification.findById(notification._id)
+        .populate('sender', 'user_name profile_picture full_name')
+        .populate('post', 'image');
+
+    // console.log('Created notification:', populatedNotification);
+
+    // Emit the notification in real-time
+    const io = getIO();
+    if (io) {
+        console.log('Emitting notification to user:', recipientId);
+        io.to(`user_${recipientId}`).emit('notification', populatedNotification);
+    } else {
+        console.error('Socket.io not initialized');
+    }
+
+    return populatedNotification;
 }); 

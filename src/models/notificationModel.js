@@ -20,7 +20,7 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['like', 'message', 'connection', 'match'],
+        enum: ['like', 'message', 'swipe', 'match'],
         required: [true, 'Notification must have a type']
     },
     post: {

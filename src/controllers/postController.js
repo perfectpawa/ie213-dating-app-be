@@ -1,6 +1,6 @@
 const { Post, Comment } = require('../models/postModel');
 const User = require('../models/userModel');
-const Notification = require('../models/notificationModel');
+const { createNotification } = require('./notificationController');
 const getDataUri = require("../utils/dataUri");
 const { uploadToCloudinary } = require("../utils/cloudinary");
 
@@ -89,7 +89,7 @@ exports.toggleLike = async (req, res) => {
             
             // Create notification for post owner if the liker is not the post owner
             if (post.user.toString() !== req.user._id.toString()) {
-                await Notification.createNotification(
+                await createNotification(
                     post.user,
                     req.user._id,
                     'like',
@@ -144,8 +144,17 @@ exports.addComment = async (req, res) => {
         });
 
         await post.save();
-        await post.populate('user', 'user_name');
         await post.populate('comments.user', 'user_name');
+
+        // Create notification for post owner if the commenter is not the post owner
+        if (post.user.toString() !== req.user._id.toString()) {
+            await createNotification(
+                post.user,
+                req.user._id,
+                'comment',
+                post._id
+            );
+        }
 
         res.status(200).json({
             status: 'success',
