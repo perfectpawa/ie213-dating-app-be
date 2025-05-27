@@ -2,6 +2,7 @@
 
 const mongoose = require('mongoose');
 const app = require('./app');
+const { initializeSocket } = require('./services/socketService');
 
 const PORT = process.env.PORT || 8000;
 const DB_URI = process.env.DB_URI || 'mongodb://localhost:27017/dating-app';
@@ -12,9 +13,13 @@ mongoose
     .connect(DB_URI)
     .then(() => {
         console.log('Successfully connected to MongoDB');
-        app.listen(PORT, () => {
+        const server = app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
         });
+        
+        // Initialize Socket.io
+        initializeSocket(server);
+        console.log('Socket.io initialized');
     })
     .catch((err) => {
         console.error('MongoDB connection error:', err);
