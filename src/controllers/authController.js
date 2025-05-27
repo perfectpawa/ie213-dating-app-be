@@ -73,11 +73,18 @@ exports.signup = catchAsync(async (req, res, next) => {
                     html: htmlTemplate
                 });
 
-                return res.status(200).json({
-                    status: 'success',
-                    message: 'OTP re-sent to your email address',
-                    user: existingUser
-                });
+                createSendToken(
+                    newUser,
+                    200,
+                    res,
+                    'User registered successfully. Please check your email for verification'
+                );
+
+                // return res.status(200).json({
+                //     status: 'success',
+                //     message: 'OTP re-sent to your email address',
+                //     user: existingUser
+                // });
 
             } catch (error) {
                 console.error(error);
