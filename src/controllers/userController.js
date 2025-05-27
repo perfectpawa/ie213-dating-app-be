@@ -1,6 +1,12 @@
 const User = require('../models/userModel');
 const getDataUri = require("../utils/dataUri");
 const {uploadToCloudinary} = require("../utils/cloudinary");
+const { Post } = require('../models/postModel');
+const Notification = require('../models/notificationModel');
+const Message = require('../models/messageModel');
+const Swipe = require('../models/swipeModel');
+const Block = require('../models/blockModel');
+const Match = require('../models/matchModel');
 
 // Get user by ID
 exports.getUserById = async (req, res) => {
@@ -143,6 +149,79 @@ exports.getOtherUsers = async (req, res) => {
         res.status(200).json({
             status: 'success',
             data: { users }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
+
+exports.deleteUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        // Delete all associated data in parallel
+        await Promise.all([
+            // Delete user's posts and their associated comments
+            Post.deleteMany({ user: userId }),
+            
+            // Delete notifications where user is either sender or recipient
+            Notification.deleteMany({
+                $or: [
+                    { sender: userId },
+                    { recipient: userId }
+                ]
+            }),
+            
+            // Delete messages where user is either sender or receiver
+            Message.deleteMany({
+                $or: [
+                    { senderId: userId },
+                    { receiverId: userId }
+                ]
+            }),
+            
+            // Delete swipes where user is either swiper or swiped user
+            Swipe.deleteMany({
+                $or: [
+                    { swiperId: userId },
+                    { swipedUserId: userId }
+                ]
+            }),
+            
+            // Delete blocks where user is either blocker or blocked user
+            Block.deleteMany({
+                $or: [
+                    { blockerId: userId },
+                    { blockedUserId: userId }
+                ]
+            }),
+            
+            // Delete matches where user is either user1 or user2
+            Match.deleteMany({
+                $or: [
+                    { user1Id: userId },
+                    { user2Id: userId }
+                ]
+            }),
+            
+            // Finally delete the user
+            User.findByIdAndDelete(userId)
+        ]);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'User and all associated data deleted successfully'
         });
     } catch (error) {
         res.status(500).json({
