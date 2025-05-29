@@ -40,7 +40,7 @@ exports.completeUserProfile = async (req, res) => {
 
         const { id } = req.params;
 
-        const { user_name, full_name, gender, bio } = req.body;
+        const { user_name, full_name, gender, bio, birthday } = req.body;
         const profilePic = req.file;
 
         let cloudinaryResponse;
@@ -63,6 +63,7 @@ exports.completeUserProfile = async (req, res) => {
         user.full_name = full_name || user.full_name;
         user.gender = gender || user.gender;
         user.bio = bio || user.bio;
+        user.birthday = birthday || user.birthday;
         user.profile_picture = cloudinaryResponse ? cloudinaryResponse : user.profile_picture;
         user.completeProfile = true;
 
@@ -82,27 +83,79 @@ exports.completeUserProfile = async (req, res) => {
     }
 };
 
-// update user cover picture
-exports.updateUserCoverPicture = async (req, res) => {
+//update user profile picture
+exports.updateUserProfilePicture = async (req, res) => {
+
+    const userId = req.user.id;
+
     try {
-        const coverPic = req.file;
+        const profilePic = req.file;
 
-        let cloudinaryResponse;
-
-        if (coverPic) {
-            const dataUri = getDataUri(coverPic);
-            cloudinaryResponse = await uploadToCloudinary(dataUri);
-            console.log(cloudinaryResponse);
-        }
-
-        //find user by auth_id
-        const user = await User.findOne({ id });
+        const user = await User.findById(userId);
 
         if (!user) {
             return res.status(404).json({
                 status: 'error',
                 message: 'User not found'
             });
+        }
+
+        let cloudinaryResponse;
+
+        if (profilePic) {
+            const dataUri = getDataUri(profilePic);
+            cloudinaryResponse = await uploadToCloudinary(dataUri);
+            console.log(cloudinaryResponse);
+        }
+
+
+
+        //update user profile picture
+        user.profile_picture = cloudinaryResponse ? cloudinaryResponse : user.profile_picture;
+
+        await user.save({validateBeforeSave: false});
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Profile updated successfully',
+            data: {
+                user
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+
+}
+
+// update user cover picture
+exports.updateUserCoverPicture = async (req, res) => {
+
+    const userId = req.user.id;
+
+    try {
+        const coverPic = req.file;
+
+        let cloudinaryResponse;
+
+        //find user by auth_id
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        if (coverPic) {
+            const dataUri = getDataUri(coverPic);
+            cloudinaryResponse = await uploadToCloudinary(dataUri);
+            console.log(cloudinaryResponse);
         }
 
         //update cover user profile
@@ -125,6 +178,48 @@ exports.updateUserCoverPicture = async (req, res) => {
         });
     }
 };
+
+// update user profile information
+exports.updateUserProfile = async (req, res) => {
+
+    const userId = req.user.id;
+
+    try {
+        const { full_name, bio, gender, birthday } = req.body;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        //update user profile
+        user.full_name = full_name || user.full_name;
+        user.gender = gender || user.gender;
+        user.bio = bio || user.bio;
+        user.birthday = birthday || user.birthday;
+
+        await user.save({validateBeforeSave: false});
+        
+        res.status(200).json({
+            status: 'success',
+            message: 'Profile updated successfully',
+            data: {
+                user
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+
+}
 
 exports.getCurrentUser = async (req, res) => {
     try {
@@ -324,11 +419,14 @@ exports.getInteractedUsers = async (req, res) => {
             });
         }
 
-        // Get all swiped users' IDs
-        const swipedUsers = await Swipe.find({ swiperId: userId })
-            .populate('swipedUserId', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v')
-            .select('swipedUserId');
+        // Get all swiped users' IDs with status is not dislike
+        const swipedUsers = await Swipe.find({
+            swiperId: userId,
+            status: { $ne: 'dislike' } // Exclude dislikes
+        })
+        .populate('swipedUserId', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v');
 
+        
         // Get all matched users' IDs
         const matchedUsers = await Match.find({
             $or: [

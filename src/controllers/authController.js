@@ -74,7 +74,7 @@ exports.signup = catchAsync(async (req, res, next) => {
                 });
 
                 createSendToken(
-                    newUser,
+                    existingUser,
                     200,
                     res,
                     'User registered successfully. Please check your email for verification'
@@ -324,4 +324,28 @@ exports.changePassword = catchAsync(async (req, res, next) => {
     await user.save();
 
     createSendToken(user, 200, res, 'Password changed successfully');
+});
+
+exports.checkUserNameValidation = catchAsync(async (req, res, next) => {
+    const user_name = req.params.user_name;
+
+    if (!user_name) {
+        return next(new AppError('Username is required', 400));
+    }
+
+    //check is valid username, is username is taken or not
+    const user = await User.findOne({ user_name });
+
+    if (user) {
+        return res.status(200).json({
+            status: 'success',
+            message: 'Username is already taken',
+            isValid: false
+        });
+    }
+    return res.status(200).json({
+        status: 'success',
+        message: 'Username is available',
+        isValid: true
+    });
 });
