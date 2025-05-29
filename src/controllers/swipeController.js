@@ -56,13 +56,11 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
     
     if (!swiperId) {
         return next(new AppError('Swiper ID is required in the request body or as a query parameter', 400));
-    }
-
-    // If direction is provided instead of status, convert it (for backward compatibility)
+    }    // If direction is provided instead of status, convert it (for backward compatibility)
     if (!status && direction) {
-        if (direction === 'right') status = 'like';
-        else if (direction === 'left') status = 'dislike';
-        else if (direction === 'up') status = 'superlike';
+        if (direction === 'right') status = 'superlike'; // right is love (superlike)
+        else if (direction === 'left') status = 'dislike'; // left is dislike
+        else if (direction === 'up') status = 'like'; // up is like
     }
 
     // Validate status
@@ -228,40 +226,38 @@ exports.getUserSwipes = catchAsync(async (req, res, next) => {
 
 // Get potential matches
 exports.getPotentialMatches = catchAsync(async (req, res, next) => {
-    const { userId } = req.query;
-    
-    if (!userId) {
-        return next(new AppError('User ID is required as a query parameter', 400));
+  // Get userId from query parameter
+  const { userId } = req.query;
+  
+  if (!userId) {
+    return next(new AppError('User ID is required as a query parameter', 400));
+  }
+  
+  console.log(`Finding potential matches for user ${userId}`);
+  
+  // Query to find users the current user hasn't swiped on yet
+  // Get users already swiped by this user
+  const swipedUserIds = await Swipe.find({ swiperId: userId }).distinct('swipedUserId');
+  
+  // Add self to excluded ids
+  swipedUserIds.push(userId);
+  
+  console.log(`User has swiped on ${swipedUserIds.length - 1} users`);
+  
+  // Find users not swiped by this user
+  const potentialMatches = await User.find({ 
+    _id: { $nin: swipedUserIds },
+    completeProfile: true
+  }).select('_id user_name full_name gender profile_picture bio');
+  
+  // Add this return statement
+  return res.status(200).json({
+    status: 'success',
+    results: potentialMatches.length,
+    data: {
+      potentialMatches
     }
-    
-    // Find users that the current user has not swiped on yet
-    const swipedUserIds = await Swipe.find({ swiperId: userId }).distinct('swipedUserId');
-    
-    // Add current user's ID to exclude list
-    swipedUserIds.push(userId);
-    
-    // Find users that have blocked the current user or are blocked by the current user
-    const blockedUserIds = await Block.find({
-        $or: [
-            { blockerId: userId },
-            { blockedUserId: userId }
-        ]
-    }).distinct(doc => doc.blockerId.equals(userId) ? 'blockedUserId' : 'blockerId');
-    
-    // Add blocked users to exclude list
-    swipedUserIds.push(...blockedUserIds);
-      // Find potential matches
-    const potentialMatches = await User.find({
-        _id: { $nin: swipedUserIds }
-    }).select('username email');
-    
-    res.status(200).json({
-        status: 'success',
-        results: potentialMatches.length,
-        data: {
-            potentialMatches
-        }
-    });
+  });
 });
 
 // Get swipe by ID
