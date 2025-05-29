@@ -93,7 +93,9 @@ exports.toggleLike = async (req, res) => {
                     post.user,
                     req.user._id,
                     'like',
-                    post._id
+                    post._id,
+                    null,
+                    null
                 );
             }
         } else {

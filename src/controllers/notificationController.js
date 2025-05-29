@@ -60,10 +60,10 @@ exports.markAllAsRead = catchAsync(async (req, res, next) => {
 });
 
 // Create a new notification and emit it in real-time
-exports.createNotification = catchAsync(async (recipientId, senderId, type, postId = null) => {
+exports.createNotification = catchAsync(async (recipientId, senderId, type, postId = null, swipeId = null, matchId = null) => {
     console.log('Creating notification:', { recipientId, senderId, type, postId });
     
-    const notification = await Notification.createNotification(recipientId, senderId, type, postId);
+    const notification = await Notification.createNotification(recipientId, senderId, type, postId, swipeId, matchId);
     
     // Populate the notification with sender and post details
     const populatedNotification = await Notification.findById(notification._id)

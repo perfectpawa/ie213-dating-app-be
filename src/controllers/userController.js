@@ -230,3 +230,83 @@ exports.deleteUser = async (req, res) => {
         });
     }
 }
+
+exports.getMatchedUsers = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        //get all matched users id in match, and sort by match createdAt, filter duplicates and userId
+        const matchedUserIds = await Match.find({
+            $or: [
+                { user1Id: userId },
+                { user2Id: userId }
+            ]
+        })
+        .sort({ createdAt: -1 })
+        .distinct('user1Id user2Id')
+        .then(matches => {
+            return matches.filter(id => id.toString() !== userId);
+        });
+
+        if (matchedUserIds.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'No matched found'
+            });
+        }
+
+        // Fetch user details for matched users
+        const matchedUsers = await User.find({ _id: { $in: matchedUserIds } })
+            .select('-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v');
+
+        if (matchedUsers.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'No matched users found'
+            });
+        }
+        
+
+        res.status(200).json({
+            status: 'success',
+            data: { matchedUsers }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
+
+exports.getSwipedUsers = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Get all swiped users' IDs
+        const swipedUserIds = await Swipe.find({ swiperId: userId })
+            .distinct('swipedUserId');
+
+        if (swipedUserIds.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'No swiped users found'
+            });
+        }
+
+        // Fetch user details for swiped users
+        const swipedUsers = await User.find({ _id: { $in: swipedUserIds } })
+            .select('-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v');
+
+        res.status(200).json({
+            status: 'success',
+            data: { users: swipedUsers }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+
+}

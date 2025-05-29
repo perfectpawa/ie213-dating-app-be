@@ -4,6 +4,7 @@ const User = require('../models/userModel');
 const Match = require('../models/matchModel');
 const Block = require('../models/blockModel');
 const Message = require('../models/messageModel');
+const Notification = require('../models/notificationModel');
 const { createNotification } = require('./notificationController');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
@@ -146,8 +147,22 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                 });
 
                 // Create notifications for both users
-                await createNotification(swiperId, swipedUserId, 'match', match._id);
-                await createNotification(swipedUserId, swiperId, 'match', match._id);
+                await createNotification(
+                    swipedUserId,
+                    swiperId,
+                    'match',
+                    null,
+                    null,
+                    match._id
+                );
+                await createNotification(
+                    swiperId,
+                    swipedUserId,
+                    'match',
+                    null,
+                    null,
+                    match._id
+                );
             }
         }
         
@@ -160,11 +175,23 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
             }
         });
     }    // Create new swipe
+    
     const newSwipe = await Swipe.create({
         swiperId,
         swipedUserId: swipedUserObjectId,
         status
     });
+
+    //create notification for the swiped user
+    await createNotification(
+        swipedUserId,
+        swiperId,
+        'swipe',
+        null,
+        newSwipe._id,
+        null
+    );
+
 
     // Check if there's a mutual like (match)
     let match = null;
@@ -185,8 +212,22 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
             });
 
             // Create notifications for both users
-            await createNotification(swiperId, swipedUserId, 'match', match._id);
-            await createNotification(swipedUserId, swiperId, 'match', match._id);
+            await createNotification(
+                swipedUserId,
+                swiperId,
+                'match',
+                null,
+                null,
+                match._id
+            );
+            await createNotification(
+                swiperId,
+                swipedUserId,
+                'match',
+                null,
+                null,
+                match._id
+            );
         }
     }
 

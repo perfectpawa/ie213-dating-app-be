@@ -27,6 +27,14 @@ const notificationSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Posts'
     },
+    swipe: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Swipes'
+    },
+    match: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Matches'
+    },
     read: {
         type: Boolean,
         default: false
@@ -44,12 +52,14 @@ notificationSchema.index({ recipient: 1, createdAt: -1 });
 notificationSchema.index({ recipient: 1, read: 1 });
 
 // Static method to create a notification
-notificationSchema.statics.createNotification = async function(recipientId, senderId, type, postId = null) {
+notificationSchema.statics.createNotification = async function(recipientId, senderId, type, postId = null, swipeId = null, matchId = null) {
     return await this.create({
         recipient: recipientId,
         sender: senderId,
         type,
-        post: postId
+        post: postId,
+        swipe: swipeId,
+        match: matchId
     });
 };
 
