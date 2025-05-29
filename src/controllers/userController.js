@@ -310,3 +310,89 @@ exports.getSwipedUsers = async (req, res) => {
     }
 
 }
+
+// Get Interacted users infor and status of it (swiped, matched)
+// data: [ {user, status: 'swiped' | 'matched' | 'not_interacted'} ]
+exports.getInteractedUsers = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        if (!userId) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'User ID is required'
+            });
+        }
+
+        // Get all swiped users' IDs
+        const swipedUsers = await Swipe.find({ swiperId: userId })
+            .populate('swipedUserId', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v')
+            .select('swipedUserId');
+
+        // Get all matched users' IDs
+        const matchedUsers = await Match.find({
+            $or: [
+                { user1Id: userId },
+                { user2Id: userId }
+            ]
+        })
+        .populate('user1Id', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v')
+        .populate('user2Id', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v');
+
+        // Create a map for matched users
+        const matchedUserMap = {};
+        matchedUsers.forEach(match => {
+            if (match.user1Id._id.toString() !== userId) {
+                matchedUserMap[match.user1Id._id.toString()] = 'matched';
+            } else {
+                matchedUserMap[match.user2Id._id.toString()] = 'matched';
+            }
+        });
+
+        // Create a map for swiped users
+        const swipedUserMap = {};
+        swipedUsers.forEach(swipe => {
+            swipedUserMap[swipe.swipedUserId._id.toString()] = 'swiped';
+        });
+
+        // Combine results
+        const interactedUsers = [];
+        
+        // Add matched users first
+        for (const match of matchedUsers) {
+            if (match.user1Id._id.toString() !== userId) {
+                interactedUsers.push({
+                    user: match.user1Id,
+                    status: 'matched'
+                });
+            } else {
+                interactedUsers.push({
+                    user: match.user2Id,
+                    status: 'matched'
+                });
+            }
+        }
+
+        // Add swiped users
+        for (const swipe of swipedUsers) {
+            if (!matchedUserMap[swipe.swipedUserId._id.toString()]) {
+                interactedUsers.push({
+                    user: swipe.swipedUserId,
+                    status: 'swiped'
+                });
+            }
+        }
+    
+    
+        res.status(200).json({
+            status: 'success',
+            data: { users: interactedUsers }
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
