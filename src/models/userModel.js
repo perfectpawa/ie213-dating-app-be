@@ -44,6 +44,11 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    authProvider: {
+        type: String,
+        enum: ['email', 'google'],
+        default: 'local'  
+    },
     user_name: {
         type: String,
         default: '',

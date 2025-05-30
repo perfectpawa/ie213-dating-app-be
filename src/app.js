@@ -3,6 +3,9 @@ const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const User = require('./models/userModel');
 require('dotenv').config();
 
 // Import route files
@@ -25,6 +28,57 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Passport middleware
+app.use(passport.initialize());
+
+// Passport Google OAuth configuration
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "/api/users/auth/google/callback",
+    scope: ['profile', 'email']
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        // Check if user already exists
+        let user = await User.findOne({ email: profile.emails[0].value });
+
+        if (user) {
+            // If user exists but hasn't completed profile, update their Google info
+            if (!user.completeProfile) {
+                user.full_name = profile.displayName;
+                user.profile_picture = profile.photos[0].value;
+                user.isVerified = true; // Google accounts are pre-verified
+                await user.save();
+            }
+            return done(null, user);
+        }
+
+        // Check if email is already registered with a regular account
+        const existingUser = await User.findOne({ 
+            email: profile.emails[0].value,
+            authProvider: { $ne: 'google' } // Check if user exists but not with Google
+        });
+
+        if (existingUser) {
+            return done(new Error('EMAIL_ALREADY_REGISTERED'), null);
+        }
+
+        // If user doesn't exist, create new user
+        user = await User.create({
+            email: profile.emails[0].value,
+            full_name: profile.displayName,
+            profile_picture: profile.photos[0].value,
+            isVerified: true, // Google accounts are pre-verified
+            password: Math.random().toString(36).slice(-8), // Generate random password
+            authProvider: 'google' // Mark this account as Google-authenticated
+        });
+
+        return done(null, user);
+    } catch (error) {
+        return done(error, null);
+    }
+}));
 
 // Home route with API info
 app.get('/', (req, res) => {
@@ -70,6 +124,14 @@ app.use((err, req, res, next) => {
     // Set default values
     const statusCode = err.statusCode || 500;
     const status = err.status || 'error';
+
+    // Handle specific error cases
+    if (err.message === 'EMAIL_ALREADY_REGISTERED') {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Email này đã được đăng ký bằng tài khoản thường. Vui lòng đăng nhập bằng email và mật khẩu.'
+        });
+    }
 
     // Format the response
     res.status(statusCode).json({
