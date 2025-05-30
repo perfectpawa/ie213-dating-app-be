@@ -4,7 +4,7 @@ const upload = require('../middleware/multer');
 const isAuthenticated = require('../middleware/isAuthenticated');
 
 const { 
-    completeUserProfile, getCurrentUser, getUserById, getOtherUsers, deleteUser, getMatchedUsers, getSwipedUsers, getInteractedUsers,
+    completeUserProfile, getCurrentUser, getUserById, getOtherUsers, deleteUser, getMatchedUsers, getSwipedUsers, getInteractedUsers, getEnhancedMatchInfo,
     updateUserProfilePicture, updateUserCoverPicture, updateUserProfile
  } = require('../controllers/userController');
 const {signup, verifyAccount, resendOTP, login, logout, forgotPassword, resetPassword, changePassword, checkUserNameValidation } = require('../controllers/authController');
@@ -14,6 +14,7 @@ router.get('/other-users', isAuthenticated, getOtherUsers);
 router.get('/matched-users', isAuthenticated, getMatchedUsers);
 router.get('/swiped-users', isAuthenticated, getSwipedUsers);
 router.get('/interacted-users', isAuthenticated, getInteractedUsers);
+router.get('/enhanced-match-info', isAuthenticated, getEnhancedMatchInfo);
 
 router.post('/update-profile-picture', isAuthenticated, upload.single("profile_picture"), updateUserProfilePicture);
 router.post('/update-cover-picture', isAuthenticated, upload.single("cover_picture"), updateUserCoverPicture);

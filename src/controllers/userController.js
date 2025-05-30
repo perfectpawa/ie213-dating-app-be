@@ -494,3 +494,91 @@ exports.getInteractedUsers = async (req, res) => {
         });
     }
 }
+
+// Get Enhanced Match Information (Separated by categories)
+// Returns: outgoing likes, incoming likes, and mutual matches in separate arrays
+exports.getEnhancedMatchInfo = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        if (!userId) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'User ID is required'
+            });
+        }
+
+        // 1. Get outgoing likes (people current user liked but not matched yet)
+        const outgoingSwipes = await Swipe.find({
+            swiperId: userId,
+            status: { $in: ['like', 'superlike'] }
+        })
+        .populate('swipedUserId', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v');
+
+        // 2. Get incoming likes (people who liked current user but not matched yet)
+        const incomingSwipes = await Swipe.find({
+            swipedUserId: userId,
+            status: { $in: ['like', 'superlike'] }
+        })
+        .populate('swiperId', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v');
+
+        // 3. Get mutual matches
+        const mutualMatches = await Match.find({
+            $or: [
+                { user1Id: userId },
+                { user2Id: userId }
+            ]
+        })
+        .populate('user1Id', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v')
+        .populate('user2Id', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v');
+
+        // Create a set of matched user IDs for filtering
+        const matchedUserIds = new Set();
+        mutualMatches.forEach(match => {
+            const otherId = match.user1Id._id.toString() === userId ? 
+                          match.user2Id._id.toString() : 
+                          match.user1Id._id.toString();
+            matchedUserIds.add(otherId);
+        });
+
+        // Filter outgoing likes to exclude already matched users
+        const outgoingLikes = outgoingSwipes
+            .filter(swipe => !matchedUserIds.has(swipe.swipedUserId._id.toString()))
+            .map(swipe => ({
+                user: swipe.swipedUserId,
+                status: 'swiped',
+                swipeType: swipe.status // 'like' or 'superlike'
+            }));
+
+        // Filter incoming likes to exclude already matched users  
+        const incomingLikes = incomingSwipes
+            .filter(swipe => !matchedUserIds.has(swipe.swiperId._id.toString()))
+            .map(swipe => ({
+                user: swipe.swiperId,
+                status: 'liked_you',
+                swipeType: swipe.status // 'like' or 'superlike'
+            }));
+
+        // Format mutual matches
+        const matches = mutualMatches.map(match => ({
+            user: match.user1Id._id.toString() === userId ? match.user2Id : match.user1Id,
+            status: 'matched',
+            matchDate: match.matchDate
+        }));
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                outgoingLikes,    // Những người mà bạn đã chọn để ghép đôi
+                incomingLikes,    // Những người đã chọn ghép đôi với bạn  
+                mutualMatches: matches  // Những người đã ghép đôi với bạn (mutual)
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
