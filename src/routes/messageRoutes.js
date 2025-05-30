@@ -8,6 +8,7 @@ router.get('/', isAuthenticated, messageController.getAllMessages);
 router.post('/', isAuthenticated, messageController.sendMessage);
 router.get('/conversations', isAuthenticated, messageController.getConversations);
 router.get('/conversations/:otherUserId', isAuthenticated, messageController.getConversation);
+router.post('/mark-read', isAuthenticated, messageController.markMessagesAsRead);
 router.get('/:messageId', isAuthenticated, messageController.getMessageById);
 router.patch('/:messageId', isAuthenticated, messageController.updateMessage);
 router.delete('/:messageId', isAuthenticated, messageController.deleteMessage);

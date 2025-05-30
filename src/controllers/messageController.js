@@ -5,8 +5,7 @@ const mongoose = require('mongoose');
 const { AppError } = require('../utils/appError');
 
 // Get all conversations for a user
-exports.getConversations = async (req, res, next) => {
-  try {
+exports.getConversations = async (req, res, next) => {  try {
     const { userId } = req.query;
     
     if (!userId) {
@@ -14,14 +13,16 @@ exports.getConversations = async (req, res, next) => {
         status: 'fail',
         message: 'User ID is required as a query parameter'
       });
-    }    // Get all matches for the user
+    }
+    
+    // Get all matches for the user
     const matches = await Match.find({
       $or: [
         { user1Id: userId },
         { user2Id: userId }
       ]
-    }).populate('user1Id', 'username email profile')
-     .populate('user2Id', 'username email profile')
+    }).populate('user1Id', 'username email user_name full_name profile_picture profile')
+     .populate('user2Id', 'username email user_name full_name profile_picture profile')
      .sort({ createdAt: -1 });
 
     const conversations = [];
@@ -44,14 +45,15 @@ exports.getConversations = async (req, res, next) => {
           senderId: otherUser._id,
           receiverId: userId,
           isRead: false
-        });
-
-        conversations.push({
+        });        conversations.push({
           matchId: match._id,
           user: {
             _id: otherUser._id,
             username: otherUser.username,
+            user_name: otherUser.user_name,
+            full_name: otherUser.full_name,
             email: otherUser.email,
+            profile_picture: otherUser.profile_picture,
             profile: otherUser.profile
           },
           lastMessage,
@@ -96,28 +98,30 @@ exports.getConversation = async (req, res, next) => {
         status: 'fail',
         message: 'Invalid user IDs provided'
       });
-    }
-
-    // Find messages between the two users
+    }    // Find messages between the two users
     const messages = await Message.find({
       $or: [
         { senderId: userId, receiverId: otherUserId },
         { senderId: otherUserId, receiverId: userId }
       ]
     })
-    .populate('senderId', 'username email profile')
-    .populate('receiverId', 'username email profile')
+    .populate('senderId', 'username email user_name full_name profile_picture profile')
+    .populate('receiverId', 'username email user_name full_name profile_picture profile')
     .sort({ createdAt: 1 });
 
     console.log(`Found ${messages.length} messages`);
-
+    
     // Transform messages for frontend
     const transformedMessages = messages.map(message => ({
       _id: message._id,
       sender: {
         _id: message.senderId._id,
-        user_name: message.senderId.username || message.senderId.email,
-        profile_picture: message.senderId.profile?.profile_picture
+        user_name: message.senderId.user_name || message.senderId.full_name || message.senderId.username || message.senderId.email,
+        full_name: message.senderId.full_name,
+        username: message.senderId.username,
+        email: message.senderId.email,
+        profile_picture: message.senderId.profile_picture || message.senderId.profile?.profile_picture,
+        profile: message.senderId.profile
       },
       receiver: message.receiverId._id,
       content: message.content,
@@ -178,10 +182,8 @@ exports.sendMessage = async (req, res, next) => {
       isRead: false
     });
 
-    console.log('Message created:', message);
-
-    // Populate sender info
-    await message.populate('senderId', 'username email profile');
+    console.log('Message created:', message);    // Populate sender info with all relevant fields
+    await message.populate('senderId', 'username email user_name full_name profile_picture profile');
 
     res.status(201).json({
       status: 'success',
@@ -189,8 +191,12 @@ exports.sendMessage = async (req, res, next) => {
         _id: message._id,
         sender: {
           _id: message.senderId._id,
-          user_name: message.senderId.username || message.senderId.email,
-          profile_picture: message.senderId.profile?.profile_picture
+          username: message.senderId.username,
+          user_name: message.senderId.user_name || message.senderId.full_name || message.senderId.username || message.senderId.email,
+          full_name: message.senderId.full_name,
+          email: message.senderId.email,
+          profile_picture: message.senderId.profile_picture || message.senderId.profile?.profile_picture,
+          profile: message.senderId.profile
         },
         receiver: message.receiverId,
         content: message.content,
@@ -260,6 +266,60 @@ exports.deleteMessage = async (req, res, next) => {
       data: null
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// Mark messages as read
+exports.markMessagesAsRead = async (req, res, next) => {
+  try {
+    const { otherUserId } = req.body;
+    const currentUserId = req.user._id;
+    
+    if (!otherUserId) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'otherUserId is required'
+      });
+    }
+    
+    console.log(`Marking messages from ${otherUserId} to ${currentUserId} as read`);
+    
+    // Count unread messages before update for logging
+    const unreadCount = await Message.countDocuments({
+      senderId: otherUserId,
+      receiverId: currentUserId,
+      isRead: false
+    });
+    
+    console.log(`Found ${unreadCount} unread messages to mark as read`);
+    
+    // Update all unread messages from otherUserId to currentUserId
+    const result = await Message.updateMany(
+      { 
+        senderId: otherUserId,
+        receiverId: currentUserId,
+        isRead: false
+      },
+      { 
+        isRead: true 
+      }
+    );
+    
+    console.log(`Updated ${result.modifiedCount} messages to read status`);
+    
+    // Return more detailed information in the response
+    res.status(200).json({
+      status: 'success',
+      data: {
+        markedRead: result.modifiedCount,
+        previousUnreadCount: unreadCount
+      },
+      message: `${result.modifiedCount} messages marked as read`
+    });
+    
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
     next(error);
   }
 };
