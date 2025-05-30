@@ -494,3 +494,85 @@ exports.getInteractedUsers = async (req, res) => {
         });
     }
 }
+
+//get relationship current user and other user (no relevant - wait their swipe - wait your swipe - match)
+exports.getRelationship = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const otherUserId = req.params.otherUserId;
+
+        if (!userId || !otherUserId) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'User ID and Other User ID are required'
+            });
+        }
+
+        // Check if the users are blocked
+        const isBlocked = await Block.findOne({
+            $or: [
+                { blockerId: userId, blockedUserId: otherUserId },
+                { blockerId: otherUserId, blockedUserId: userId }
+            ]
+        });
+
+        if (isBlocked) {
+            return res.status(403).json({
+                status: 'error',
+                message: 'You cannot interact with this user as they have blocked you or you have blocked them.'
+            });
+        }
+
+        // Check if the users have matched
+        const match = await Match.findOne({
+            $or: [
+                { user1Id: userId, user2Id: otherUserId },
+                { user1Id: otherUserId, user2Id: userId }
+            ]
+        });
+
+        if (match) {
+            return res.status(200).json({
+                status: 'success',
+                relationship: 'match'
+            });
+        }
+
+        // Check if the current user has swiped on the other user
+        const currentUserSwipe = await Swipe.findOne({
+            swiperId: userId,
+            swipedUserId: otherUserId
+        });
+
+        // Check if the other user has swiped on the current user
+        const otherUserSwipe = await Swipe.findOne({
+            swiperId: otherUserId,
+            swipedUserId: userId
+        });
+
+        if (currentUserSwipe) {
+            return res.status(200).json({
+                status: 'success',
+                relationship: 'wait_for_their_swipe'
+            });
+        }
+
+        if (otherUserSwipe) {
+            return res.status(200).json({
+                status: 'success',
+                relationship: 'wait_for_your_swipe'
+            });
+        }
+
+        // If no match or swipe found, return no_relevant
+        res.status(200).json({
+            status: 'success',
+            relationship: 'no_relevant'
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
