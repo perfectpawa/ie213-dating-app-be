@@ -349,3 +349,14 @@ exports.checkUserNameValidation = catchAsync(async (req, res, next) => {
         isValid: true
     });
 });
+
+exports.getMe = catchAsync(async (req, res, next) => {
+    const user = await User.findById(req.user._id).select('-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires');
+    if (!user) {
+        return next(new AppError('User not found', 404));
+    }
+    res.status(200).json({
+        status: 'success',
+        user
+    });
+});

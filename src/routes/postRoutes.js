@@ -2,13 +2,16 @@ const express = require('express');
 const router = express.Router();
 const isAuthenticated = require('../middleware/isAuthenticated');
 const upload = require('../middleware/multer');
-const { createPost, getAllPosts, toggleLike, addComment, deletePost, getAllPostsByUser, getAllPostsExceptOwn } = require('../controllers/postController');
+const { createPost, getAllPosts, toggleLike, addComment, deletePost, getAllPostsByUser, getAllPostsExceptOwn, updatePost } = require('../controllers/postController');
 
 // Create a new post
 router.post('/', isAuthenticated, upload.single("image"), createPost);
 
 // Get all posts
 router.get('/', isAuthenticated, getAllPosts);
+
+//update a post
+router.put('/:id', isAuthenticated, upload.single("image"), updatePost);
 
 // Like/Unlike a post
 router.get('/:id/like', isAuthenticated, toggleLike);

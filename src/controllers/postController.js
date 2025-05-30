@@ -1,6 +1,6 @@
 const { Post, Comment } = require('../models/postModel');
 const User = require('../models/userModel');
-const { createNotification } = require('./notificationController');
+const Notification = require('../models/notificationModel');
 const getDataUri = require("../utils/dataUri");
 const { uploadToCloudinary } = require("../utils/cloudinary");
 
@@ -86,21 +86,33 @@ exports.toggleLike = async (req, res) => {
         if (likeIndex === -1) {
             // Like the post
             post.likes.push(req.user._id);
-            
-            // Create notification for post owner if the liker is not the post owner
-            if (post.user.toString() !== req.user._id.toString()) {
-                await createNotification(
-                    post.user,
-                    req.user._id,
-                    'like',
-                    post._id,
-                    null,
-                    null
-                );
+
+            // Create notification for post owner if the liker is not the post owner - first check is have notification already exists
+            const existingNotification = await Notification.findOne({
+                recipient: post.user,
+                sender: req.user._id,
+                type: 'like',
+                post: post._id
+            });
+            if (!existingNotification && post.user.toString() !== req.user._id.toString()) {
+                await Notification.create({
+                    recipient: post.user,
+                    sender: req.user._id,
+                    type: 'like',
+                    post: post._id
+                });
             }
+
         } else {
-            // Unlike the post
             post.likes.splice(likeIndex, 1);
+
+            // Remove notification if it exists
+            await Notification.deleteOne({
+                recipient: post.user,
+                sender: req.user._id,
+                type: 'like',
+                post: post._id
+            });
         }
 
         await post.save();
@@ -158,6 +170,61 @@ exports.addComment = async (req, res) => {
             );
         }
 
+        res.status(200).json({
+            status: 'success',
+            data: { post }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
+// Update a post
+exports.updatePost = async (req, res) => {
+    try {
+        const { content } = req.body;
+        const image = req.file;
+
+        if (!content && !image) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Content or image is required to update the post'
+            });
+        }
+
+        const post = await Post.findById(req.params.id);
+        
+        if (!post) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Post not found'
+            });
+        }
+
+        // Check if user is the post owner
+        if (post.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                status: 'error',
+                message: 'Not authorized to update this post'
+            });
+        }
+
+        if (content) {
+            post.content = content;
+        }
+
+        if (image) {
+            const dataUri = getDataUri(image);
+            const cloudinaryResponse = await uploadToCloudinary(dataUri);
+            post.image = cloudinaryResponse;
+        }
+
+        await post.save();
+        await post.populate('user', 'user_name profile_picture full_name bio');
+        
         res.status(200).json({
             status: 'success',
             data: { post }

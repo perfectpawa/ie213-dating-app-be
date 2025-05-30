@@ -8,7 +8,6 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
     const notifications = await Notification.find({ recipient: req.user._id })
         .sort('-createdAt')
         .populate('sender', 'user_name profile_picture full_name')
-        .populate('post', 'image');
 
     res.status(200).json({
         status: 'success',

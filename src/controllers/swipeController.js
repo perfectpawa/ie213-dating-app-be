@@ -5,7 +5,6 @@ const Match = require('../models/matchModel');
 const Block = require('../models/blockModel');
 const Message = require('../models/messageModel');
 const Notification = require('../models/notificationModel');
-const { createNotification } = require('./notificationController');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
@@ -147,7 +146,7 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                 });
 
                 // Create notifications for both users
-                await createNotification(
+                await Notification.createNotification(
                     swipedUserId,
                     swiperId,
                     'match',
@@ -155,7 +154,7 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                     null,
                     match._id
                 );
-                await createNotification(
+                await Notification.createNotification(
                     swiperId,
                     swipedUserId,
                     'match',
@@ -183,13 +182,13 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
     });
 
     //create notification for the swiped user
-    await createNotification(
-        swipedUserId,
+    await Notification.createNotification(
+        swipedUserObjectId,
         swiperId,
         'swipe',
         null,
         newSwipe._id,
-        null
+        null,
     );
 
 
@@ -212,17 +211,17 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
             });
 
             // Create notifications for both users
-            await createNotification(
-                swipedUserId,
+            await Notification.createNotification(
+                swipedUserObjectId,
                 swiperId,
                 'match',
                 null,
                 null,
                 match._id
             );
-            await createNotification(
+            await Notification.createNotification(
                 swiperId,
-                swipedUserId,
+                swipedUserObjectId,
                 'match',
                 null,
                 null,

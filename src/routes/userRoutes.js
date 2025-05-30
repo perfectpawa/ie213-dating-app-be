@@ -7,7 +7,7 @@ const {
     completeUserProfile, getCurrentUser, getUserById, getOtherUsers, deleteUser, getMatchedUsers, getSwipedUsers, getInteractedUsers,
     updateUserProfilePicture, updateUserCoverPicture, updateUserProfile
  } = require('../controllers/userController');
-const {signup, verifyAccount, resendOTP, login, logout, forgotPassword, resetPassword, changePassword, checkUserNameValidation } = require('../controllers/authController');
+const {signup, verifyAccount, resendOTP, login, logout, forgotPassword, resetPassword, changePassword, checkUserNameValidation, getMe } = require('../controllers/authController');
 
 router.get('/me', isAuthenticated, getCurrentUser);
 router.get('/other-users', isAuthenticated, getOtherUsers);
@@ -33,6 +33,8 @@ router.post('/logout', logout);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/change-password', isAuthenticated, changePassword);
+router.get('/me', isAuthenticated, getMe);
+
 
 router.get('/check-username/:user_name', checkUserNameValidation);
 
