@@ -84,7 +84,15 @@ const userSchema = new mongoose.Schema({
     },
     cover_picture: {
         type: String,
-    }
+    },
+    interests: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Interest'
+    }],
+    completeInterest: {
+        type: Boolean,
+        default: false
+    },
 }, {
     timestamps: true
 });

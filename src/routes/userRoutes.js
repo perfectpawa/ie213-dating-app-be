@@ -6,7 +6,7 @@ const isAuthenticated = require('../middleware/isAuthenticated');
 const jwt = require('jsonwebtoken');
 
 const { 
-    updateUserProfilePicture, updateUserCoverPicture, updateUserProfile, getRelationship,
+    updateUserProfilePicture, updateUserCoverPicture, updateUserProfile, getRelationship, completeInterest, getUserInterests,
     completeUserProfile, getCurrentUser, getUserById, getOtherUsers, deleteUser, getMatchedUsers, getSwipedUsers, getInteractedUsers, getEnhancedMatchInfo,
  } = require('../controllers/userController');
 const {
@@ -20,6 +20,7 @@ router.get('/matched-users', isAuthenticated, getMatchedUsers);
 router.get('/swiped-users', isAuthenticated, getSwipedUsers);
 router.get('/interacted-users', isAuthenticated, getInteractedUsers);
 router.get('/enhanced-match-info', isAuthenticated, getEnhancedMatchInfo);
+
 router.get('/relationship/:otherUserId', isAuthenticated, getRelationship);
 
 router.post('/update-profile-picture', isAuthenticated, upload.single("profile_picture"), updateUserProfilePicture);
@@ -27,6 +28,8 @@ router.post('/update-cover-picture', isAuthenticated, upload.single("cover_pictu
 router.post('/update-profile', isAuthenticated, updateUserProfile);
 
 router.post('/:id/complete-profile', upload.single("profile_picture"), completeUserProfile);
+router.post('/:id/complete-interest', isAuthenticated, completeInterest);
+router.get('/:id/interests', isAuthenticated, getUserInterests);
 router.get('/:userId', isAuthenticated, getUserById);
 router.delete('/:userId', isAuthenticated, deleteUser);
 

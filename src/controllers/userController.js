@@ -7,6 +7,7 @@ const Message = require('../models/messageModel');
 const Swipe = require('../models/swipeModel');
 const Block = require('../models/blockModel');
 const Match = require('../models/matchModel');
+const Interest = require('../models/interestModel');
 
 // Get user by ID
 exports.getUserById = async (req, res) => {
@@ -657,6 +658,92 @@ exports.getEnhancedMatchInfo = async (req, res) => {
             }
         });
 
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
+
+exports.completeInterest = async (req, res) => {
+
+
+
+    try {
+        const userId = req.user.id;
+        const { interestIds } = req.body;
+
+        if (!userId || !interestIds || !Array.isArray(interestIds)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'User ID and interests are required'
+            });
+        }
+
+        // Find the user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        // Validate interest IDs
+        const validInterests = await Interest.find({ _id: { $in: interestIds } });
+        
+        if (validInterests.length !== interestIds.length) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Some interests are invalid'
+            });
+        }
+
+        // Update user's interests
+        user.interests = validInterests.map(interest => interest._id);
+        user.completeInterest = true;
+        await user.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Interests updated successfully',
+            user
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+
+}
+
+exports.getUserInterests = async (req, res) => {
+    try {
+        const { id: userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'User ID is required'
+            });
+        }
+
+        // Find the user
+        const user = await User.findById(userId).populate('interests', '-createdAt -updatedAt -__v');
+        
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { interests: user.interests }
+        });
     } catch (error) {
         res.status(500).json({
             status: 'error',

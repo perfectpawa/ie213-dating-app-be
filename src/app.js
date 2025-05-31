@@ -16,6 +16,9 @@ const swipeRoutes = require('./routes/swipeRoutes');
 const blockRoutes = require('./routes/blockRoutes');
 const postRoutes = require('./routes/postRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const interestRoutes = require('./routes/interestRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+
 const app = express();
 app.use(cookieParser());
 
@@ -110,6 +113,9 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/swipes', swipeRoutes);
 app.use('/api/blocks', blockRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/interests', interestRoutes);
+app.use('/api/categories', categoryRoutes);
+
 // Error handling for invalid ObjectID format
 app.use((err, req, res, next) => {
     if (err instanceof mongoose.Error.CastError && err.kind === 'ObjectId') {
