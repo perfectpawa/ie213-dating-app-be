@@ -62,8 +62,17 @@ exports.markAllAsRead = catchAsync(async (req, res, next) => {
 exports.createNotification = catchAsync(async (recipientId, senderId, type, postId = null, swipeId = null, matchId = null) => {
     console.log('Creating notification:', { recipientId, senderId, type, postId });
     
-    const notification = await Notification.createNotification(recipientId, senderId, type, postId, swipeId, matchId);
-    
+    // const notification = await Notification.createNotification(recipientId, senderId, type, postId, swipeId, matchId);
+
+    const notification = await Notification.create({
+        recipient: recipientId,
+        sender: senderId,
+        type: type,
+        post: postId,
+        swipe: swipeId,
+        match: matchId
+    });
+
     // Populate the notification with sender and post details
     const populatedNotification = await Notification.findById(notification._id)
         .populate('sender', 'user_name profile_picture full_name')

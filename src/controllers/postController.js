@@ -3,6 +3,7 @@ const User = require('../models/userModel');
 const Notification = require('../models/notificationModel');
 const getDataUri = require("../utils/dataUri");
 const { uploadToCloudinary } = require("../utils/cloudinary");
+const {createNotification} = require("./notificationController");
 
 // Create a new post
 exports.createPost = async (req, res) => {
@@ -95,12 +96,20 @@ exports.toggleLike = async (req, res) => {
                 post: post._id
             });
             if (!existingNotification && post.user.toString() !== req.user._id.toString()) {
-                await Notification.create({
-                    recipient: post.user,
-                    sender: req.user._id,
-                    type: 'like',
-                    post: post._id
-                });
+                // await Notification.create({
+                //     recipient: post.user,
+                //     sender: req.user._id,
+                //     type: 'like',
+                //     post: post._id
+                // });
+                await createNotification(
+                    post.user,
+                    req.user._id,
+                    'like',
+                    post._id,
+                    null,
+                    null
+                );
             }
 
         } else {

@@ -7,6 +7,8 @@ const Message = require('../models/messageModel');
 const Notification = require('../models/notificationModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+const {createNotification} = require("./notificationController");
+
 
 // Get all swipes
 exports.getAllSwipes = catchAsync(async (req, res, next) => {
@@ -146,7 +148,7 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                 });
 
                 // Create notifications for both users
-                await Notification.createNotification(
+                await createNotification(
                     swipedUserId,
                     swiperId,
                     'match',
@@ -154,7 +156,7 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                     null,
                     match._id
                 );
-                await Notification.createNotification(
+                await createNotification(
                     swiperId,
                     swipedUserId,
                     'match',
@@ -182,7 +184,7 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
     });
 
     //create notification for the swiped user
-    await Notification.createNotification(
+    await createNotification(
         swipedUserObjectId,
         swiperId,
         'swipe',
@@ -211,7 +213,7 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
             });
 
             // Create notifications for both users
-            await Notification.createNotification(
+            await createNotification(
                 swipedUserObjectId,
                 swiperId,
                 'match',
@@ -219,7 +221,7 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                 null,
                 match._id
             );
-            await Notification.createNotification(
+            await createNotification(
                 swiperId,
                 swipedUserObjectId,
                 'match',
