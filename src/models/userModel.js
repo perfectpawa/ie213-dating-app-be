@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Email is required'],
         unique: true,
-        lowercase: true
+        lowercase: true,
+        trim: true,
     },
     password: {
         type: String,
@@ -47,7 +48,7 @@ const userSchema = new mongoose.Schema({
     authProvider: {
         type: String,
         enum: ['email', 'google'],
-        default: 'local'  
+        default: 'email'  
     },
     user_name: {
         type: String,

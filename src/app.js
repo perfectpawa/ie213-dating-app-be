@@ -60,7 +60,11 @@ passport.use(new GoogleStrategy({
             authProvider: { $ne: 'google' } // Check if user exists but not with Google
         });
 
+        console.log('_______Checking:', profile.emails[0].value);
+        console.log('_______Checking existing user:', existingUser);
+
         if (existingUser) {
+            console.error('_______Email already registered with a regular account:', existingUser.email);
             return done(new Error('EMAIL_ALREADY_REGISTERED'), null);
         }
 

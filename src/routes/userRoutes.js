@@ -9,7 +9,10 @@ const {
     updateUserProfilePicture, updateUserCoverPicture, updateUserProfile, getRelationship,
     completeUserProfile, getCurrentUser, getUserById, getOtherUsers, deleteUser, getMatchedUsers, getSwipedUsers, getInteractedUsers, getEnhancedMatchInfo,
  } = require('../controllers/userController');
-const {signup, verifyAccount, resendOTP, login, logout, forgotPassword, resetPassword, changePassword, checkUserNameValidation, getMe } = require('../controllers/authController');
+const {
+    signup, verifyAccount, resendOTP, login, logout, forgotPassword, resetPassword, 
+    changePassword, checkUserNameValidation, getMe, handleGoogleAuth 
+} = require('../controllers/authController');
 
 router.get('/me', isAuthenticated, getCurrentUser);
 router.get('/other-users', isAuthenticated, getOtherUsers);
@@ -47,45 +50,6 @@ router.get('/auth/google',
     passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
-router.get('/auth/google/callback',
-    (req, res, next) => {
-        passport.authenticate('google', { 
-            failureRedirect: '/login',
-            session: false
-        }, async (err, user, info) => {
-            try {
-                if (err) {
-                    if (err.message === 'EMAIL_ALREADY_REGISTERED') {
-                        return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/signin?error=email_already_registered`);
-                    }
-                    throw err;
-                }
-
-                if (!user) {
-                    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/signin?error=google_auth_failed`);
-                }
-
-                // Create JWT token
-                const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-                    expiresIn: process.env.JWT_EXPIRES_IN
-                });
-
-                // Set cookie
-                res.cookie('token', token, {
-                    expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-                });
-
-                // Redirect to frontend with token
-                res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/google/callback?token=${token}`);
-            } catch (error) {
-                console.error('Error during Google authentication:', error);
-                res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/signin?error=google_auth_failed`);
-            }
-        })(req, res, next);
-    }
-);
+router.get('/auth/google/callback', handleGoogleAuth);
 
 module.exports = router; 
