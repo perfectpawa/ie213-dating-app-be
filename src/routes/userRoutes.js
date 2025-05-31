@@ -8,7 +8,8 @@ const jwt = require('jsonwebtoken');
 const { 
     updateUserProfilePicture, updateUserCoverPicture, updateUserProfile, getRelationship, completeInterest, getUserInterests,
     completeUserProfile, getCurrentUser, getUserById, getOtherUsers, deleteUser, getMatchedUsers, getSwipedUsers, getInteractedUsers, getEnhancedMatchInfo,
- } = require('../controllers/userController');
+    getSimilarInterests
+} = require('../controllers/userController');
 const {
     signup, verifyAccount, resendOTP, login, logout, forgotPassword, resetPassword, 
     changePassword, checkUserNameValidation, getMe, handleGoogleAuth 
@@ -20,6 +21,7 @@ router.get('/matched-users', isAuthenticated, getMatchedUsers);
 router.get('/swiped-users', isAuthenticated, getSwipedUsers);
 router.get('/interacted-users', isAuthenticated, getInteractedUsers);
 router.get('/enhanced-match-info', isAuthenticated, getEnhancedMatchInfo);
+router.get('/similar-interests/:otherUserId', isAuthenticated, getSimilarInterests);
 
 router.get('/relationship/:otherUserId', isAuthenticated, getRelationship);
 

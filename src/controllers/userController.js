@@ -751,3 +751,50 @@ exports.getUserInterests = async (req, res) => {
         });
     }
 }
+
+// Get similar interests between two users
+exports.getSimilarInterests = async (req, res) => {
+    try {
+        const { otherUserId } = req.params;
+        const currentUserId = req.user.id;
+
+        // Get both users with their interests populated
+        const [currentUser, otherUser] = await Promise.all([
+            User.findById(currentUserId).populate('interests'),
+            User.findById(otherUserId).populate('interests')
+        ]);
+
+        if (!currentUser || !otherUser) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'One or both users not found'
+            });
+        }
+
+        // Get the intersection of interests
+        const currentUserInterests = currentUser.interests.map(interest => interest._id.toString());
+        const otherUserInterests = otherUser.interests.map(interest => interest._id.toString());
+        
+        const similarInterests = currentUserInterests.filter(interestId => 
+            otherUserInterests.includes(interestId)
+        );
+
+        // Get the full interest details for the similar interests
+        const similarInterestsDetails = await Interest.find({
+            _id: { $in: similarInterests }
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                similarInterests: similarInterestsDetails,
+                count: similarInterestsDetails.length
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};

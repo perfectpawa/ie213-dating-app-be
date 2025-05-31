@@ -317,3 +317,84 @@ exports.getAllPostsExceptOwn = async (req, res) => {
         });
     }
 };
+
+// Get posts sorted by similar interests and like status with pagination
+exports.getPostsBySimilarInterests = async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Get current user with interests
+        const currentUser = await User.findById(currentUserId).populate('interests');
+        if (!currentUser) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        // Get total count of posts for pagination
+        const totalPosts = await Post.countDocuments({ user: { $ne: currentUserId } });
+        const totalPages = Math.ceil(totalPosts / limit);
+
+        // Get all posts except current user's posts with pagination
+        const posts = await Post.find({ user: { $ne: currentUserId } })
+            .populate('user', 'user_name full_name profile_picture interests')
+            .populate('likes', '_id')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Process posts to add similar interests count and like status
+        const processedPosts = await Promise.all(posts.map(async (post) => {
+            const postUser = post.user;
+            
+            // Get similar interests count
+            const currentUserInterests = currentUser.interests.map(interest => interest._id.toString());
+            const postUserInterests = postUser.interests.map(interest => interest._id.toString());
+            const similarInterestsCount = currentUserInterests.filter(interestId => 
+                postUserInterests.includes(interestId)
+            ).length;
+
+            // Check if current user has liked the post
+            const isLiked = post.likes.some(like => like._id.toString() === currentUserId);
+
+            return {
+                ...post.toObject(),
+                similarInterestsCount,
+                isLiked
+            };
+        }));
+
+        // Sort posts: unliked first, then by similar interests count
+        const sortedPosts = processedPosts.sort((a, b) => {
+            // First sort by like status (unliked first)
+            if (a.isLiked !== b.isLiked) {
+                return a.isLiked ? 1 : -1;
+            }
+            // Then sort by similar interests count (descending)
+            return b.similarInterestsCount - a.similarInterestsCount;
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                posts: sortedPosts,
+                pagination: {
+                    currentPage: page,
+                    totalPages,
+                    totalPosts,
+                    hasNextPage: page < totalPages,
+                    hasPreviousPage: page > 1
+                }
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};

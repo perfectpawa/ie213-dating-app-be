@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const isAuthenticated = require('../middleware/isAuthenticated');
 const upload = require('../middleware/multer');
-const { createPost, getAllPosts, toggleLike, addComment, deletePost, getAllPostsByUser, getAllPostsExceptOwn, updatePost } = require('../controllers/postController');
+const { createPost, getAllPosts, toggleLike, addComment, deletePost, getAllPostsByUser, getAllPostsExceptOwn, updatePost, getPostsBySimilarInterests } = require('../controllers/postController');
 
 // Create a new post
 router.post('/', isAuthenticated, upload.single("image"), createPost);
@@ -27,5 +27,8 @@ router.get('/user/:userId', isAuthenticated, getAllPostsByUser);
 
 // Get all posts except own
 router.get('/except-own', isAuthenticated, getAllPostsExceptOwn);
+
+// Get posts sorted by similar interests
+router.get('/similar-interests', isAuthenticated, getPostsBySimilarInterests);
 
 module.exports = router; 
