@@ -238,7 +238,11 @@ exports.getOtherUsers = async (req, res) => {
     const currentUser = req.user;
 
     try {
+        //filler user not verified, not complete profile, not complete interest
         const users = await User.find({ _id: { $ne: currentUser._id } })
+            .where('isVerified').equals(true)
+            .where('completeProfile').equals(true)
+            .where('completeInterest').equals(true)
             .select('-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v')
             .sort({ createdAt: -1 });
 
