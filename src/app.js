@@ -35,16 +35,17 @@ app.use(morgan('dev'));
 // Passport middleware
 app.use(passport.initialize());
 
-// Passport Google OAuth configuration
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/api/users/auth/google/callback",
-    scope: ['profile', 'email']
-}, async (accessToken, refreshToken, profile, done) => {
-    try {
-        // Check if user already exists
-        let user = await User.findOne({ email: profile.emails[0].value });
+// Passport Google OAuth configuration - only initialize if credentials exist
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(new GoogleStrategy({
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: "/api/users/auth/google/callback",
+        scope: ['profile', 'email']
+    }, async (accessToken, refreshToken, profile, done) => {
+        try {
+            // Check if user already exists
+            let user = await User.findOne({ email: profile.emails[0].value });
 
         if (user) {
             // If user exists but hasn't completed profile, update their Google info
@@ -79,13 +80,14 @@ passport.use(new GoogleStrategy({
             isVerified: true, // Google accounts are pre-verified
             password: Math.random().toString(36).slice(-8), // Generate random password
             authProvider: 'google' // Mark this account as Google-authenticated
-        });
-
-        return done(null, user);
+        });        return done(null, user);
     } catch (error) {
         return done(error, null);
     }
 }));
+} else {
+    console.log('Warning: Google OAuth credentials are missing. Google authentication is disabled.');
+}
 
 // Home route with API info
 app.get('/', (req, res) => {
