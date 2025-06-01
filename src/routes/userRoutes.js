@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const { 
     updateUserProfilePicture, updateUserCoverPicture, updateUserProfile, getRelationship, completeInterest, getUserInterests,
     completeUserProfile, getCurrentUser, getUserById, getOtherUsers, deleteUser, getMatchedUsers, getSwipedUsers, getInteractedUsers, getEnhancedMatchInfo,
-    getSimilarInterests
+    getSimilarInterests, updateUserInterests
 } = require('../controllers/userController');
 const {
     signup, verifyAccount, resendOTP, login, logout, forgotPassword, resetPassword, 
@@ -28,6 +28,8 @@ router.get('/relationship/:otherUserId', isAuthenticated, getRelationship);
 router.post('/update-profile-picture', isAuthenticated, upload.single("profile_picture"), updateUserProfilePicture);
 router.post('/update-cover-picture', isAuthenticated, upload.single("cover_picture"), updateUserCoverPicture);
 router.post('/update-profile', isAuthenticated, updateUserProfile);
+
+router.post('/update-interests', isAuthenticated, updateUserInterests);
 
 router.post('/:id/complete-profile', upload.single("profile_picture"), completeUserProfile);
 router.post('/:id/complete-interest', isAuthenticated, completeInterest);

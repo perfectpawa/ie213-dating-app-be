@@ -667,9 +667,6 @@ exports.getEnhancedMatchInfo = async (req, res) => {
 }
 
 exports.completeInterest = async (req, res) => {
-
-
-
     try {
         const userId = req.user.id;
         const { interestIds } = req.body;
@@ -751,6 +748,54 @@ exports.getUserInterests = async (req, res) => {
         });
     }
 }
+
+exports.updateUserInterests = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { interests: interestIds } = req.body;
+
+        if (!userId || !interestIds || !Array.isArray(interestIds)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'User ID and interests are required'
+            });
+        }
+
+        // Find the user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        // Validate interest IDs
+        const validInterests = await Interest.find({ _id: { $in: interestIds } });
+        
+        if (validInterests.length !== interestIds.length) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Some interests are invalid'
+            });
+        }
+
+        // Update user's interests
+        user.interests = validInterests.map(interest => interest._id);
+        await user.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Interests updated successfully',
+            user
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
 
 // Get similar interests between two users
 exports.getSimilarInterests = async (req, res) => {
