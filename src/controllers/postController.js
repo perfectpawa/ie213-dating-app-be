@@ -378,6 +378,12 @@ exports.getPostsBySimilarInterests = async (req, res) => {
             return b.similarInterestsCount - a.similarInterestsCount;
         });
 
+        //suffle the unliked posts with random order
+        const unlikedPosts = sortedPosts.filter(post => !post.isLiked);
+        const likedPosts = sortedPosts.filter(post => post.isLiked);
+        const shuffledUnlikedPosts = unlikedPosts.sort(() => Math.random() - 0.5);
+        sortedPosts = [...shuffledUnlikedPosts, ...likedPosts];
+
         res.status(200).json({
             status: 'success',
             data: {
