@@ -4,6 +4,7 @@ const User = require('../models/userModel');
 const Message = require('../models/messageModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+const Swipe = require('../models/swipeModel');
 
 // Helper function to get ObjectId from user id
 const getUserObjectId = async (userId) => {
@@ -198,11 +199,11 @@ exports.updateMatch = catchAsync(async (req, res, next) => {
 // Unmatch (delete match)
 exports.unmatch = catchAsync(async (req, res, next) => {
   const { matchId } = req.params;
-  const { userId } = req.query;
+  // const { userId } = req.query;
   
-  if (!userId) {
-    return next(new AppError('User ID is required as a query parameter', 400));
-  }
+  // if (!userId) {
+  //   return next(new AppError('User ID is required as a query parameter', 400));
+  // }
   
   const match = await Match.findOne({
     $or: [
@@ -215,16 +216,24 @@ exports.unmatch = catchAsync(async (req, res, next) => {
     return next(new AppError('Match not found', 404));
   }
   
-  // Check if user is part of the match
-  if (match.user1Id.toString() !== userId.toString() && match.user2Id.toString() !== userId.toString()) {
-    return next(new AppError('You can only unmatch from matches you are part of', 403));
-  }
+  // // Check if user is part of the match
+  // if (match.user1Id.toString() !== userId.toString() && match.user2Id.toString() !== userId.toString()) {
+  //   return next(new AppError('You can only unmatch from matches you are part of', 403));
+  // }
   
   // Delete any messages between the users
   await Message.deleteMany({
     $or: [
       { senderId: match.user1Id, receiverId: match.user2Id },
       { senderId: match.user2Id, receiverId: match.user1Id }
+    ]
+  });
+
+  //delete any swipes related to this match
+  await Swipe.deleteMany({
+    $or: [
+      { swiperId: match.user1Id, swipedUserId: match.user2Id },
+      { swiperId: match.user2Id, swipedUserId: match.user1Id }
     ]
   });
   

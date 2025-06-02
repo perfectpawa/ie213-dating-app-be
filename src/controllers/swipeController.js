@@ -277,7 +277,12 @@ exports.getPotentialMatches = catchAsync(async (req, res, next) => {
   
   console.log(`Finding potential matches for user ${userId}`);
   
-  // Query to find users the current user hasn't swiped on yet
+  // Get current user's interests
+  const currentUser = await User.findById(userId).populate('interests');
+  if (!currentUser) {
+    return next(new AppError('User not found', 404));
+  }
+  
   // Get users already swiped by this user
   const swipedUserIds = await Swipe.find({ swiperId: userId }).distinct('swipedUserId');
   
@@ -286,18 +291,34 @@ exports.getPotentialMatches = catchAsync(async (req, res, next) => {
   
   console.log(`User has swiped on ${swipedUserIds.length - 1} users`);
   
-  // Find users not swiped by this user
+  // Find users not swiped by this user and populate their interests
   const potentialMatches = await User.find({ 
     _id: { $nin: swipedUserIds },
     completeProfile: true
-  }).select('_id user_name full_name gender profile_picture bio');
+  })
+  .populate('interests')
+  .select('_id user_name full_name gender profile_picture bio birthday interests');
+  
+  // Calculate interest similarity and sort
+  const matchesWithSimilarity = potentialMatches.map(match => {
+    const matchingInterests = match.interests.filter(interest => 
+      currentUser.interests.some(userInterest => 
+        userInterest._id.toString() === interest._id.toString()
+      )
+    );
+    
+    return {
+      ...match.toObject(),
+      matchingInterestsCount: matchingInterests.length
+    };
+  }).sort((a, b) => b.matchingInterestsCount - a.matchingInterestsCount);
   
   // Add this return statement
   return res.status(200).json({
     status: 'success',
-    results: potentialMatches.length,
+    results: matchesWithSimilarity.length,
     data: {
-      potentialMatches
+      potentialMatches: matchesWithSimilarity
     }
   });
 });
