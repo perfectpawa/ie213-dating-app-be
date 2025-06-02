@@ -72,6 +72,31 @@ exports.getAllPosts = async (req, res) => {
     }
 };
 
+// Get a single post
+exports.getPost = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id)
+            .populate('user', 'user_name profile_picture full_name bio')
+
+        if (!post) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Post not found'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { post }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
 // Like/Unlike a post
 exports.toggleLike = async (req, res) => {
     try {
@@ -104,14 +129,14 @@ exports.toggleLike = async (req, res) => {
                 //     type: 'like',
                 //     post: post._id
                 // });
-                await createNotification(
-                    post.user,
-                    req.user._id,
-                    'like',
-                    post._id,
-                    null,
-                    null
-                );
+                await createNotification({
+                    recipientId: post.user,
+                    senderId: req.user._id,
+                    type: 'like',
+                    postId: post._id,
+                    swipeId: null,
+                    matchId: null
+                });
             }
 
         } else {
@@ -127,7 +152,7 @@ exports.toggleLike = async (req, res) => {
         }
 
         await post.save();
-        await post.populate('user', 'user_name profile_picture full_name bio');
+        await post.populate('user', 'user_name profile_picture full_name');
         await post.populate('comments.user', 'user_name profile_picture full_name');
 
         res.status(200).json({
@@ -402,45 +427,6 @@ exports.getPostsBySimilarInterests = async (req, res) => {
             ...shuffledOtherUnlikedPosts,
             ...shuffledLikedPosts,
         ];
-
-
-
-        //      // Process posts to add similar interests count and like status
-        // const processedPosts = await Promise.all(posts.map(async (post) => {
-        //     const postUser = post.user;
-            
-        //     // Get similar interests count
-        //     const currentUserInterests = currentUser.interests.map(interest => interest._id.toString());
-        //     const postUserInterests = postUser.interests.map(interest => interest._id.toString());
-        //     const similarInterestsCount = currentUserInterests.filter(interestId => 
-        //         postUserInterests.includes(interestId)
-        //     ).length;
-
-        //     // Check if current user has liked the post
-        //     const isLiked = post.likes.some(like => like._id.toString() === currentUserId);
-
-        //     return {
-        //         ...post.toObject(),
-        //         similarInterestsCount,
-        //         isLiked
-        //     };
-        // }));
-
-        // // Sort posts: unliked first, then by similar interests count
-        // const sortedPosts = processedPosts.sort((a, b) => {
-        //     // First sort by like status (unliked first)
-        //     if (a.isLiked !== b.isLiked) {
-        //         return a.isLiked ? 1 : -1;
-        //     }
-        //     // Then sort by similar interests count (descending)
-        //     return b.similarInterestsCount - a.similarInterestsCount;
-        // });
-
-        // //suffle the unliked posts with random order
-        // const unlikedPosts = sortedPosts.filter(post => !post.isLiked);
-        // const likedPosts = sortedPosts.filter(post => post.isLiked);
-        // const shuffledUnlikedPosts = unlikedPosts.sort(() => Math.random() - 0.5);
-        // const shufflePost = [...shuffledUnlikedPosts, ...likedPosts];
 
         res.status(200).json({
             status: 'success',
