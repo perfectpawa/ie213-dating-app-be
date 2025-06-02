@@ -1,6 +1,8 @@
 const { Post, Comment } = require('../models/postModel');
 const User = require('../models/userModel');
 const Notification = require('../models/notificationModel');
+const Match = require('../models/matchModel');
+const Swipe = require('../models/swipeModel');
 const getDataUri = require("../utils/dataUri");
 const { uploadToCloudinary } = require("../utils/cloudinary");
 const {createNotification} = require("./notificationController");
@@ -347,42 +349,98 @@ exports.getPostsBySimilarInterests = async (req, res) => {
             .skip(skip)
             .limit(limit);
 
-        // Process posts to add similar interests count and like status
-        const processedPosts = await Promise.all(posts.map(async (post) => {
-            const postUser = post.user;
-            
-            // Get similar interests count
-            const currentUserInterests = currentUser.interests.map(interest => interest._id.toString());
-            const postUserInterests = postUser.interests.map(interest => interest._id.toString());
-            const similarInterestsCount = currentUserInterests.filter(interestId => 
-                postUserInterests.includes(interestId)
-            ).length;
+        const likedPosts = posts.filter(post =>
+            post.likes.some(like => like._id.toString() === currentUserId)
+        );
 
-            // Check if current user has liked the post
-            const isLiked = post.likes.some(like => like._id.toString() === currentUserId);
+        const unlikedPosts = posts.filter(post =>
+            !post.likes.some(like => like._id.toString() === currentUserId)
+        );
 
-            return {
-                ...post.toObject(),
-                similarInterestsCount,
-                isLiked
-            };
-        }));
-
-        // Sort posts: unliked first, then by similar interests count
-        const sortedPosts = processedPosts.sort((a, b) => {
-            // First sort by like status (unliked first)
-            if (a.isLiked !== b.isLiked) {
-                return a.isLiked ? 1 : -1;
+        //filter matched posts by matched user
+        //first gat all matched users id in match
+        const matchedUserIds = await Match.find({
+                    $or: [
+                        { user1Id: currentUserId },
+                        { user2Id: currentUserId }
+                    ]
+                })
+            .then(matches => {
+                return matches.flatMap(match => {
+                    if (match.user1Id.toString() === currentUserId) {
+                        return match.user2Id.toString();
+                    } else {
+                        return match.user1Id.toString();
+                    }
+                });
             }
-            // Then sort by similar interests count (descending)
-            return b.similarInterestsCount - a.similarInterestsCount;
-        });
+        );
 
-        //suffle the unliked posts with random order
-        const unlikedPosts = sortedPosts.filter(post => !post.isLiked);
-        const likedPosts = sortedPosts.filter(post => post.isLiked);
-        const shuffledUnlikedPosts = unlikedPosts.sort(() => Math.random() - 0.5);
-        const shufflePost = [...shuffledUnlikedPosts, ...likedPosts];
+        // console.log("Matched User IDs:", matchedUserIds);
+
+        //filter posts by matched user
+        const matchedPosts = unlikedPosts.filter(post =>
+            // matchedUserIds.includes(post.user._id.toString()) include dont work
+            matchedUserIds.some(matchedUserId => matchedUserId === post.user._id.toString())
+        );
+
+        // console.log("Matched Posts:", matchedPosts);
+        // console.log("Unliked Posts:", unlikedPosts[0]);
+
+
+        const otherUnlikedPosts = unlikedPosts.filter(post =>
+            !matchedPosts.includes(post)
+        );
+
+        // Shuffle all lists
+        const shuffledMatchedPosts = matchedPosts.sort(() => Math.random() - 0.5);
+        const shuffledOtherUnlikedPosts = otherUnlikedPosts.sort(() => Math.random() - 0.5);
+        const shuffledLikedPosts = likedPosts.sort(() => Math.random() - 0.5);
+        // Combine all posts into a single list
+        const shufflePost = [
+            ...shuffledMatchedPosts,
+            ...shuffledOtherUnlikedPosts,
+            ...shuffledLikedPosts
+        ];
+
+
+
+        //      // Process posts to add similar interests count and like status
+        // const processedPosts = await Promise.all(posts.map(async (post) => {
+        //     const postUser = post.user;
+            
+        //     // Get similar interests count
+        //     const currentUserInterests = currentUser.interests.map(interest => interest._id.toString());
+        //     const postUserInterests = postUser.interests.map(interest => interest._id.toString());
+        //     const similarInterestsCount = currentUserInterests.filter(interestId => 
+        //         postUserInterests.includes(interestId)
+        //     ).length;
+
+        //     // Check if current user has liked the post
+        //     const isLiked = post.likes.some(like => like._id.toString() === currentUserId);
+
+        //     return {
+        //         ...post.toObject(),
+        //         similarInterestsCount,
+        //         isLiked
+        //     };
+        // }));
+
+        // // Sort posts: unliked first, then by similar interests count
+        // const sortedPosts = processedPosts.sort((a, b) => {
+        //     // First sort by like status (unliked first)
+        //     if (a.isLiked !== b.isLiked) {
+        //         return a.isLiked ? 1 : -1;
+        //     }
+        //     // Then sort by similar interests count (descending)
+        //     return b.similarInterestsCount - a.similarInterestsCount;
+        // });
+
+        // //suffle the unliked posts with random order
+        // const unlikedPosts = sortedPosts.filter(post => !post.isLiked);
+        // const likedPosts = sortedPosts.filter(post => post.isLiked);
+        // const shuffledUnlikedPosts = unlikedPosts.sort(() => Math.random() - 0.5);
+        // const shufflePost = [...shuffledUnlikedPosts, ...likedPosts];
 
         res.status(200).json({
             status: 'success',
