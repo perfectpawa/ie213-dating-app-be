@@ -148,21 +148,21 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
                 });
 
                 // Create notifications for both users
+                await createNotification({
+                    recipientId: swipedUserObjectId,
+                    senderId: swiperId,
+                    type: 'match',
+                    postId: null,
+                    swipeId: null,
+                    matchId: match._id
+                });
                 await createNotification(
-                    swipedUserId,
-                    swiperId,
-                    'match',
-                    null,
-                    null,
-                    match._id
-                );
-                await createNotification(
-                    swiperId,
-                    swipedUserId,
-                    'match',
-                    null,
-                    null,
-                    match._id
+                    {recipientId: swiperId,
+                    senderId: swipedUserObjectId,
+                    type: 'match',
+                    postId: null,
+                    swipeId: null,
+                    matchId: match._id}
                 );
             }
         }
@@ -184,15 +184,6 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
     });
 
     //create notification for the swiped user
-    await createNotification(
-        swipedUserObjectId,
-        swiperId,
-        'swipe',
-        null,
-        newSwipe._id,
-        null,
-    );
-
 
     // Check if there's a mutual like (match)
     let match = null;
@@ -213,23 +204,37 @@ exports.createSwipe = catchAsync(async (req, res, next) => {
             });
 
             // Create notifications for both users
-            await createNotification(
-                swipedUserObjectId,
-                swiperId,
-                'match',
-                null,
-                null,
-                match._id
+            await createNotification({
+                recipientId: swipedUserObjectId,
+                senderId: swiperId,
+                type: 'match',
+                postId: null,
+                swipeId: null,
+                matchId: match._id
+            }
             );
-            await createNotification(
-                swiperId,
-                swipedUserObjectId,
-                'match',
-                null,
-                null,
-                match._id
+            await createNotification({
+                recipientId: swiperId,
+                senderId: swipedUserObjectId,
+                type: 'match',
+                postId: null,
+                swipeId: null,
+                matchId: match._id
+            }
             );
         }
+    }
+
+    if (!match) {
+        // Create a notification for the swiped user
+        await createNotification({
+            recipientId: swipedUserObjectId,
+            senderId: swiperId,
+            type: 'swipe',
+            postId: null,
+            swipeId: newSwipe._id,
+            matchId: null
+        });
     }
 
     res.status(201).json({
