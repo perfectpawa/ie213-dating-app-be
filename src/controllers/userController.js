@@ -847,3 +847,34 @@ exports.getSimilarInterests = async (req, res) => {
         });
     }
 };
+
+exports.getAllLikedPosts = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Find all posts liked by the user
+        const likedPosts = await Post.find({ likes: userId })
+            .populate('user', '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -createdAt -updatedAt -__v')
+            .sort({ createdAt: -1 });
+
+        if (likedPosts.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'No liked posts found'
+            });
+        }
+
+        const postIds = likedPosts.map(post => post._id);
+
+        res.status(200).json({
+            status: 'success',
+            // posts: likedPosts,
+            postIds: postIds
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}

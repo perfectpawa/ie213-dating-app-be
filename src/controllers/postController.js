@@ -400,7 +400,7 @@ exports.getPostsBySimilarInterests = async (req, res) => {
         const shufflePost = [
             ...shuffledMatchedPosts,
             ...shuffledOtherUnlikedPosts,
-            ...shuffledLikedPosts
+            ...shuffledLikedPosts,
         ];
 
 
